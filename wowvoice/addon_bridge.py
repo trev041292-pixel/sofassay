@@ -375,6 +375,20 @@ def build_status(*parts: str) -> str:
     return " | ".join(clean)[:180]
 
 
+def catch_up_due(announce: bool, synced: bool) -> bool:
+    """True when a sent message should trigger a one-off status refresh.
+
+    Starting the tool before the game means the startup status never reached
+    the addon, and nothing retries it. The first message that goes through
+    proves the player is in the world, so it is a safe moment to catch up.
+    A blinking WoW window is not: at the login screen typed text can land in
+    the account fields.
+
+    When ``announce`` is on the panel already updates after every message.
+    """
+    return not announce and not synced
+
+
 def push_status(cfg: dict, text: str, log=print) -> bool:
     """Type ``/wvc status ...`` into the game.
 

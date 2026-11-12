@@ -36,6 +36,7 @@ class VoiceChatApp:
         self.stopping = threading.Event()
         self._last_trigger = 0.0
         self._next_stop_check = 0.0
+        self._synced_status = False
         self.addon_watcher: addon_bridge.SettingsWatcher | None = None
 
     # ------------------------------------------------------------------
@@ -92,7 +93,7 @@ class VoiceChatApp:
 
         self._start_addon_watcher()
         self._banner(trigger_names)
-        self._push_status("running")
+        self._synced_status = self._push_status("running")
 
         try:
             while not self.stopping.is_set():
@@ -192,23 +193,38 @@ class VoiceChatApp:
             parts.append(f"last={last[:90]}")
         return parts
 
-    def _push_status(self, state: str = "running", last: str | None = None) -> None:
+    def _push_status(self, state: str = "running", last: str | None = None) -> bool:
         """Tell the in-game panel whether the tool is on (or off)."""
         options = self.cfg.get("addon") or {}
         if self.dry_run or not options.get("sync_status", True):
-            return
+            return False
         chat = self.cfg.get("chat") or {}
         if not wowinput.find_wow_window(
             chat.get("window_process", "Wow.exe"),
             chat.get("window_title", "World of Warcraft"),
         ):
             self.log("In-game panel: WoW is not running, so the status was not sent.")
-            return
-        addon_bridge.push_status(
+            return False
+        return addon_bridge.push_status(
             self.cfg,
             addon_bridge.build_status(*self._status_parts(state=state, last=last)),
             log=self.log,
         )
+
+    def _sync_after_message(self, body: str) -> None:
+        """Refresh the panel after a message if the startup status was missed."""
+        announce = bool((self.cfg.get("addon") or {}).get("announce_status"))
+        if announce:
+            self._push_status("running", last=body)
+            return
+        if not addon_bridge.catch_up_due(announce, self._synced_status):
+            return
+        # The tool may have started before the game, so nothing told the addon
+        # it is running. This message proves we are in the world, so it is a
+        # safe moment to catch up; retry on the next message if it fails.
+        self._synced_status = self._push_status("running", last=body)
+        if self._synced_status:
+            self.log("In-game panel: caught up after the first message.")
 
     # ------------------------------------------------------------------
     def _on_trigger(self) -> None:
@@ -288,8 +304,7 @@ class VoiceChatApp:
             )
             if ok:
                 beeps.beep("sent")
-                if (self.cfg.get("addon") or {}).get("announce_status"):
-                    self._push_status("running", last=routed.body)
+                self._sync_after_message(routed.body)
             else:
                 beeps.beep("error")
         except Exception as exc:  # noqa: BLE001
