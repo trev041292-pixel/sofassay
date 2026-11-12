@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="TOGGLEWOWVOICEPANEL" header="WOWVOICE">
+		WoWVoice_Toggle()
+	</Binding>
+</Bindings>

@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the ZIP
+        shell: pwsh
+        run: ./package.ps1 -Version ($env:VERSION -replace '^v', '')
+        env:
+          VERSION: ${{ github.ref_name }}
+
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

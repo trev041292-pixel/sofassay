@@ -1,0 +1,19 @@
+# Local setup / secrets
+.venv/
+config.json
+*.log
+*.pid
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Build output
+dist/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

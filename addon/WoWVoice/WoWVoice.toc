@@ -1,0 +1,11 @@
+## Interface: 16001, 11509
+## Title: |cff33ff99WoW Voice Chat|r
+## Notes: In-game panel and settings for the WoW Voice Chat push-to-talk tool.
+## Notes-deDE: In-Game-Panel und Einstellungen fuer das WoW Voice Chat Push-to-Talk-Werkzeug.
+## Author: WoWVoice contributors
+## Version: 1.0.0
+## SavedVariables: WoWVoiceDB
+## X-Category: Interface
+
+WoWVoice.lua
+Bindings.xml

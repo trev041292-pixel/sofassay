@@ -1,0 +1,29 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip lupa
+
+      - name: Compile
+        run: python -m compileall -q main.py control_panel.py wowvoice tests
+
+      - name: Routing checks
+        run: python selftest.py
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Addon Lua test
+        run: python tests/test_addon_lua.py
