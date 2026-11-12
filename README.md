@@ -14,40 +14,10 @@ normal chat box. A bundled in-game addon adds a small status/settings panel.
 Button -> beep -> speak -> Button -> text appears in chat
 ```
 
-## Is this allowed? Will I get banned?
+**New here?** [Install](#install) · [Using it](#using-it) · [In-game panel](#in-game-panel-addon) · [Troubleshooting](#troubleshooting)
 
-**Short version:** it is designed to work like voice dictation for chat, and it
-does not do the things Blizzard bans for. It is **not pre-approved** by
-Blizzard, though, so no third-party tool can promise zero risk.
-
-What it does **not** do:
-
-- **No bots or unattended play.** Every message needs a fresh button press and a
-  person speaking.
-- **No multiboxing or input broadcasting.** One PC, one WoW client, one account.
-- **No memory reading, DLL injection, packet editing, or game-file changes.**
-  It does not hook or inject into `Wow.exe`. The addon uses only the normal
-  addon API, stores settings, and draws a panel; it never sends chat itself.
-- **No background automation.** It does not repeat messages or play the game
-  for you.
-
-The only "automation" is: one button press -> one spoken message -> one chat
-line, typed with ordinary Windows keystrokes (the same way dictation software
-works). Blizzard's enforcement targets bots, automated gameplay, input
-broadcasting to multiple accounts, and cheats, not accessibility or chat input.
-The 2021 [input-broadcasting policy](https://worldofwarcraft.blizzard.com/en-us/news/23558957)
-is about mirroring one keystroke to multiple clients, which this tool does not
-do.
-
-To keep the risk low:
-
-- Stay at the keyboard/controller; do not run it unattended.
-- Do not use it to spam, repeat, or advertise.
-- Do not extend it to gameplay actions (attacks, rotations, movement).
-- Do not combine it with multiboxing or input-broadcasting software.
-
-Blizzard's policies and enforcement can change, and this is not legal advice.
-If you want zero third-party risk, do not use external input tools at all.
+Uses normal chat input and a standard addon. Read the
+[Blizzard policy notes](#is-this-allowed-blizzard-policy).
 
 ## Requirements
 
@@ -87,71 +57,6 @@ right-click **`setup.bat`** and choose **Run as administrator**, then press
 
 If Windows' **Smart App Control** asks about Python or a DLL the first time,
 allow it. It is a one-time reputation check.
-
-## Changing the microphone or talk button
-
-Open the control panel and press **Setup...** at any time. Everything can be
-changed there, including after the first run.
-
-### Talk button
-
-The setup window offers three modes:
-
-- **Controller button** - the Xbox Share button is already configured. For
-  another controller, press **Detect button**.
-- **Keyboard key** - choose F1-F12, Space, Tab, Mouse 4, or Mouse 5.
-- **Both** - the controller button *and* a keyboard key work (handy for testing).
-
-For a non-Xbox controller:
-
-1. Choose **Controller button**.
-2. Press **Detect button**, then press the button you want **three times**.
-3. Press **Test** and press it a few more times. The wizard reports how many
-   presses it saw.
-4. If detection fails, open **Advanced** and use
-   **`run.bat --raw-debug --seconds 30`**: press the button once and enter the
-   byte/bit that changed.
-
-Most controllers work this way, including PlayStation, Switch Pro, and 8BitDo
-models. The controller must be visible to Windows as a HID device: **Steam
-Input** or **DS4Windows** can hide or remap it. If your controller emulates a
-keyboard instead, use the **Keyboard key** mode and bind that key.
-
-The manual **Byte** and **Bit mask** fields are hidden under **Advanced** and
-are not needed for normal setup.
-
-## In-game panel (addon)
-
-The addon is included in the ZIP and installed by the setup window. In game:
-
-1. Type **`/reload`** (or restart WoW) so the addon loads.
-2. Type **`/wvc`** to open the panel. You can also bind
-   *Toggle WoWVoice Panel* in **Key Bindings**.
-3. A circular button also sits by the minimap (bottom-left by default). Click
-   it to open the panel, drag it around the minimap to move it, or hide it with
-   **`/wvc minimap off`**.
-4. Pick the default channel and toggle sticky/Escape behaviour.
-5. Press **Save & Reload UI**. The addon saves on `/reload` or logout, and the
-   desktop tool applies the new settings within a few seconds.
-
-The panel shows the last status the desktop tool sent it. Use **Send status to
-game** in the control panel to push the current state manually.
-
-WoW addons cannot open sockets or read arbitrary files, so the two sides
-communicate indirectly:
-
-- **addon -> tool:** SavedVariables, written on `/reload` or logout.
-- **tool -> addon:** a `/wvc status ...` line typed into chat.
-
-Useful commands:
-
-| Command | Effect |
-| --- | --- |
-| `/wvc` | Show or hide the panel |
-| `/wvc show` / `/wvc hide` | Panel visibility |
-| `/wvc minimap [on\|off\|reset]` | Show, hide, or move the minimap button |
-| `/wvc reload` | Save and reload the UI |
-| `/wvc status <text>` | Set the status line (used by the tool) |
 
 ## Using it
 
@@ -194,6 +99,39 @@ Channel numbers can differ between clients. Edit the `command` values in
 > **Testing tip:** use Say, party chat, or whispers while you try it out. Avoid
 > accidentally broadcasting to a large channel.
 
+## In-game panel (addon)
+
+The addon is included in the ZIP and installed by the setup window. In game:
+
+1. Type **`/reload`** (or restart WoW) so the addon loads.
+2. Type **`/wvc`** to open the panel. You can also bind
+   *Toggle WoWVoice Panel* in **Key Bindings**.
+3. A circular button also sits by the minimap (bottom-left by default). Click
+   it to open the panel, drag it around the minimap to move it, or hide it with
+   **`/wvc minimap off`**.
+4. Pick the default channel and toggle sticky/Escape behaviour.
+5. Press **Save & Reload UI**. The addon saves on `/reload` or logout, and the
+   desktop tool applies the new settings within a few seconds.
+
+The panel shows the last status the desktop tool sent it. Use **Send status to
+game** in the control panel to push the current state manually.
+
+WoW addons cannot open sockets or read arbitrary files, so the two sides
+communicate indirectly:
+
+- **addon -> tool:** SavedVariables, written on `/reload` or logout.
+- **tool -> addon:** a `/wvc status ...` line typed into chat.
+
+Useful commands:
+
+| Command | Effect |
+| --- | --- |
+| `/wvc` | Show or hide the panel |
+| `/wvc show` / `/wvc hide` | Panel visibility |
+| `/wvc minimap [on\|off\|reset]` | Show, hide, or move the minimap button |
+| `/wvc reload` | Save and reload the UI |
+| `/wvc status <text>` | Set the status line (used by the tool) |
+
 ## Control panel
 
 - **Start / Stop** - loads the speech model and begins listening, or shuts down
@@ -206,6 +144,38 @@ Channel numbers can differ between clients. Edit the `command` values in
 
 Only one panel opens at a time. Closing it stops the tool. If the shortcut is
 missing, run `panel.bat`; `run.bat` starts the console version.
+
+## Changing the microphone or talk button
+
+Open the control panel and press **Setup...** at any time. Everything can be
+changed there, including after the first run.
+
+### Talk button
+
+The setup window offers three modes:
+
+- **Controller button** - the Xbox Share button is already configured. For
+  another controller, press **Detect button**.
+- **Keyboard key** - choose F1-F12, Space, Tab, Mouse 4, or Mouse 5.
+- **Both** - the controller button *and* a keyboard key work (handy for testing).
+
+For a non-Xbox controller:
+
+1. Choose **Controller button**.
+2. Press **Detect button**, then press the button you want **three times**.
+3. Press **Test** and press it a few more times. The wizard reports how many
+   presses it saw.
+4. If detection fails, open **Advanced** and use
+   **`run.bat --raw-debug --seconds 30`**: press the button once and enter the
+   byte/bit that changed.
+
+Most controllers work this way, including PlayStation, Switch Pro, and 8BitDo
+models. The controller must be visible to Windows as a HID device: **Steam
+Input** or **DS4Windows** can hide or remap it. If your controller emulates a
+keyboard instead, use the **Keyboard key** mode and bind that key.
+
+The manual **Byte** and **Bit mask** fields are hidden under **Advanced** and
+are not needed for normal setup.
 
 ## How chat is sent
 
@@ -271,6 +241,41 @@ run.bat --send-test "/p hello"   send a fixed line
 
 The same flags work with `main.py`, for example
 `.venv\Scripts\python.exe main.py --setup`.
+
+## Is this allowed? (Blizzard policy)
+
+**Short version:** it is designed to work like voice dictation for chat, and it
+does not do the things Blizzard bans for. It is **not pre-approved** by
+Blizzard, though, so no third-party tool can promise zero risk.
+
+What it does **not** do:
+
+- **No bots or unattended play.** Every message needs a fresh button press and a
+  person speaking.
+- **No multiboxing or input broadcasting.** One PC, one WoW client, one account.
+- **No memory reading, DLL injection, packet editing, or game-file changes.**
+  It does not hook or inject into `Wow.exe`. The addon uses only the normal
+  addon API, stores settings, and draws a panel; it never sends chat itself.
+- **No background automation.** It does not repeat messages or play the game
+  for you.
+
+The only "automation" is: one button press -> one spoken message -> one chat
+line, typed with ordinary Windows keystrokes (the same way dictation software
+works). Blizzard's enforcement targets bots, automated gameplay, input
+broadcasting to multiple accounts, and cheats, not accessibility or chat input.
+The 2021 [input-broadcasting policy](https://worldofwarcraft.blizzard.com/en-us/news/23558957)
+is about mirroring one keystroke to multiple clients, which this tool does not
+do.
+
+To keep the risk low:
+
+- Stay at the keyboard/controller; do not run it unattended.
+- Do not use it to spam, repeat, or advertise.
+- Do not extend it to gameplay actions (attacks, rotations, movement).
+- Do not combine it with multiboxing or input-broadcasting software.
+
+Blizzard's policies and enforcement can change, and this is not legal advice.
+If you want zero third-party risk, do not use external input tools at all.
 
 ## Troubleshooting
 
