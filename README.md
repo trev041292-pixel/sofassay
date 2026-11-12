@@ -46,6 +46,10 @@ Button -> beep -> speak -> Button -> text appears in chat
    to World of Warcraft. Next time, launch **WoW Voice Chat** from the desktop
    shortcut.
 
+If **Install / Update** reports that Windows blocked the copy, close setup,
+right-click **`setup.bat`** and choose **Run as administrator**, then press
+**Install / Update** again.
+
 If Windows' **Smart App Control** asks about Python or a DLL the first time,
 allow it. It is a one-time reputation check.
 
@@ -231,15 +235,15 @@ The same flags work with `main.py`, for example
 
 ## Troubleshooting
 
-- **Share does nothing.** Press your keyboard fallback (F9 by default) to check
-  the rest of the app, then run `run.bat --trigger-test --seconds 30`. Run the
-  setup window and use **Detect button**. Make sure Steam Input is not
-  remapping the controller.
+- **The controller button does nothing.** Press your keyboard fallback (F9 by
+  default) to check the rest of the app, then run
+  `run.bat --trigger-test --seconds 30`. Open the setup window and use
+  **Detect button**. Make sure Steam Input is not remapping the controller.
 - **"Could not find the WoW window".** Start WoW first. The app looks for
   `Wow.exe` with a window title containing "World of Warcraft".
 - **Nothing appears in chat.** Do not leave the WoW chat box open before you
-  press Share. Check that WoW is not running as administrator while this tool
-  is not (or run both elevated).
+  press your talk button. Check that WoW is not running as administrator while
+  this tool is not (or run both elevated).
 - **"Nothing usable was heard".** Pick another microphone in **Setup...** and
   press **Test**. A quiet headset may need a higher Windows input level or a
   lower `audio.silence_dbfs` (for example `-60`).
