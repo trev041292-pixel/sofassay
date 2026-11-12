@@ -5,7 +5,7 @@
 -- status lines the desktop tool types into chat as "/wvc status ...".
 
 local ADDON_NAME = "WoWVoice"
-local VERSION = "1.0.1"
+local VERSION = "1.0.2"
 
 BINDING_HEADER_WOWVOICE = "WoW Voice Chat"
 BINDING_NAME_TOGGLEWOWVOICEPANEL = "Toggle WoWVoice Panel"
@@ -38,12 +38,15 @@ local DEFAULTS = {
 	statusTime = 0,
 	x = 0,
 	y = 0,
+	showMinimap = true,
+	minimapAngle = 220,
 }
 
 local panel
 local statusText, statusDetail, statusLast, statusAge
 local channelButtons = {}
-local stickyCheck, closeCheck, noteText
+local stickyCheck, closeCheck, minimapCheck, noteText
+local minimapButton
 local refreshAll
 
 local function chatPrint(message)
@@ -173,6 +176,9 @@ refreshAll = function()
 	if closeCheck then
 		closeCheck:SetChecked(WoWVoiceDB.closeChatAfterSend and true or false)
 	end
+	if minimapCheck then
+		minimapCheck:SetChecked(WoWVoiceDB.showMinimap and true or false)
+	end
 end
 
 local function setChannel(name)
@@ -191,6 +197,113 @@ local function makeButton(parent, text, width, height, onClick)
 	button:SetText(text)
 	button:SetScript("OnClick", onClick)
 	return button
+end
+
+-- ---------------------------------------------------------------------------
+-- Minimap button
+-- ---------------------------------------------------------------------------
+local function updateMinimapPosition()
+	if not minimapButton or not Minimap then
+		return
+	end
+	local angle = math.rad(WoWVoiceDB.minimapAngle or 220)
+	local width = Minimap:GetWidth() or 140
+	local radius = width / 2 + 10
+	minimapButton:ClearAllPoints()
+	minimapButton:SetPoint(
+		"CENTER",
+		Minimap,
+		"CENTER",
+		math.cos(angle) * radius,
+		math.sin(angle) * radius
+	)
+end
+
+local function updateMinimapVisibility()
+	if not minimapButton then
+		return
+	end
+	if WoWVoiceDB.showMinimap == false then
+		minimapButton:Hide()
+	else
+		minimapButton:Show()
+	end
+end
+
+local function buildMinimapButton()
+	if minimapButton then
+		updateMinimapVisibility()
+		return
+	end
+	if not Minimap then
+		return
+	end
+
+	minimapButton = CreateFrame("Button", "WoWVoiceMinimapButton", Minimap)
+	minimapButton:SetSize(32, 32)
+	minimapButton:SetFrameStrata("MEDIUM")
+	minimapButton:SetFrameLevel((Minimap:GetFrameLevel() or 1) + 8)
+	minimapButton:RegisterForDrag("LeftButton")
+	minimapButton:SetMovable(true)
+
+	local background = minimapButton:CreateTexture(nil, "BACKGROUND")
+	background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+	background:SetSize(20, 20)
+	background:SetPoint("CENTER")
+
+	local icon = minimapButton:CreateTexture(nil, "ARTWORK")
+	icon:SetTexture("Interface\\Icons\\INV_Misc_Spyglass_02")
+	icon:SetSize(20, 20)
+	icon:SetPoint("CENTER")
+	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+	local border = minimapButton:CreateTexture(nil, "OVERLAY")
+	border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+	border:SetSize(54, 54)
+	border:SetPoint("TOPLEFT")
+
+	minimapButton:SetScript("OnClick", function(_, button)
+		if button == "RightButton" then
+			return
+		end
+		WoWVoice_Toggle()
+	end)
+
+	minimapButton:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+		GameTooltip:AddLine("WoW Voice Chat")
+		GameTooltip:AddLine("Click to open settings", 1, 1, 1)
+		GameTooltip:AddLine("Drag to move around the minimap", 0.7, 0.7, 0.7)
+		GameTooltip:AddLine("Channel: " .. labelFor(WoWVoiceDB.defaultChannel), 0.5, 1, 0.5)
+		GameTooltip:Show()
+	end)
+	minimapButton:SetScript("OnLeave", function()
+		GameTooltip:Hide()
+	end)
+
+	local function moveMinimapButton()
+		if not Minimap then
+			return
+		end
+		local cx, cy = Minimap:GetCenter()
+		local scale = Minimap:GetEffectiveScale()
+		local x, y = GetCursorPosition()
+		if not (cx and cy and scale and scale > 0 and x and y) then
+			return
+		end
+		WoWVoiceDB.minimapAngle = math.deg(math.atan2(y / scale - cy, x / scale - cx))
+		updateMinimapPosition()
+	end
+
+	minimapButton:SetScript("OnDragStart", function(self)
+		self:SetScript("OnUpdate", moveMinimapButton)
+	end)
+	minimapButton:SetScript("OnDragStop", function(self)
+		self:SetScript("OnUpdate", nil)
+	end)
+
+	updateMinimapPosition()
+	updateMinimapVisibility()
 end
 
 local function buildPanel()
@@ -321,6 +434,17 @@ local function buildPanel()
 	closeLabel:SetPoint("LEFT", closeCheck, "RIGHT", 2, 0)
 	closeLabel:SetText("Press Escape after sending")
 
+	minimapCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+	minimapCheck:SetPoint("TOPLEFT", 16, -394)
+	minimapCheck:SetScript("OnClick", function(self)
+		WoWVoiceDB.showMinimap = self:GetChecked() and true or false
+		updateMinimapVisibility()
+		setNote("Minimap button " .. (WoWVoiceDB.showMinimap and "shown" or "hidden") .. ". This applies immediately and is saved on /reload or logout.")
+	end)
+	local minimapLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	minimapLabel:SetPoint("LEFT", minimapCheck, "RIGHT", 2, 0)
+	minimapLabel:SetText("Show minimap button")
+
 	local hint = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	hint:SetPoint("BOTTOMLEFT", 18, 20)
 	hint:SetText("/wvc  |  WoWVoice " .. VERSION)
@@ -372,6 +496,7 @@ local function printHelp()
 	chatPrint("commands:")
 	chatPrint("  /wvc - show or hide the panel")
 	chatPrint("  /wvc show | hide | toggle - panel visibility")
+	chatPrint("  /wvc minimap [on|off|reset] - show, hide, or move the minimap button")
 	chatPrint("  /wvc status <text> - used by the desktop tool")
 	chatPrint("  /wvc reload - save settings and reload the UI")
 end
@@ -392,6 +517,27 @@ SlashCmdList["WOWVOICE"] = function(msg)
 		if panel then
 			panel:Hide()
 		end
+	elseif command == "minimap" then
+		buildMinimapButton()
+		local value = string.lower(rest)
+		if value == "reset" then
+			WoWVoiceDB.minimapAngle = 220
+			updateMinimapPosition()
+			chatPrint("Minimap button moved back to its default position.")
+		else
+			if value == "on" then
+				WoWVoiceDB.showMinimap = true
+			elseif value == "off" then
+				WoWVoiceDB.showMinimap = false
+			else
+				WoWVoiceDB.showMinimap = not WoWVoiceDB.showMinimap
+			end
+			updateMinimapVisibility()
+			if minimapCheck then
+				minimapCheck:SetChecked(WoWVoiceDB.showMinimap and true or false)
+			end
+			chatPrint("Minimap button " .. (WoWVoiceDB.showMinimap and "shown" or "hidden") .. ".")
+		end
 	elseif command == "status" then
 		setStatus(rest)
 	elseif command == "reload" then
@@ -409,6 +555,7 @@ events:SetScript("OnEvent", function(_, _, name)
 	end
 	initDB()
 	buildPanel()
+	buildMinimapButton()
 	if WoWVoiceDB.status ~= "" then
 		chatPrint("Loaded. Type /wvc to open the panel.")
 	end

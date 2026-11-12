@@ -127,8 +127,11 @@ The addon is included in the ZIP and installed by the setup window. In game:
 1. Type **`/reload`** (or restart WoW) so the addon loads.
 2. Type **`/wvc`** to open the panel. You can also bind
    *Toggle WoWVoice Panel* in **Key Bindings**.
-3. Pick the default channel and toggle sticky/Escape behaviour.
-4. Press **Save & Reload UI**. The addon saves on `/reload` or logout, and the
+3. A circular button also sits by the minimap (bottom-left by default). Click
+   it to open the panel, drag it around the minimap to move it, or hide it with
+   **`/wvc minimap off`**.
+4. Pick the default channel and toggle sticky/Escape behaviour.
+5. Press **Save & Reload UI**. The addon saves on `/reload` or logout, and the
    desktop tool applies the new settings within a few seconds.
 
 The panel shows the last status the desktop tool sent it. Use **Send status to
@@ -146,6 +149,7 @@ Useful commands:
 | --- | --- |
 | `/wvc` | Show or hide the panel |
 | `/wvc show` / `/wvc hide` | Panel visibility |
+| `/wvc minimap [on\|off\|reset]` | Show, hide, or move the minimap button |
 | `/wvc reload` | Save and reload the UI |
 | `/wvc status <text>` | Set the status line (used by the tool) |
 
@@ -350,11 +354,11 @@ Local build:
 
 ```text
 powershell -ExecutionPolicy Bypass -File package.ps1
-gh release create v1.0.1 dist\WoWVoiceChat-1.0.1.zip --title "WoWVoiceChat 1.0.1"
+gh release create v1.0.2 dist\WoWVoiceChat-1.0.2.zip --title "WoWVoiceChat 1.0.2"
 ```
 
 The GitHub Actions workflows run the tests on every push and build/upload the
-ZIP automatically when you push a tag such as `v1.0.1`.
+ZIP automatically when you push a tag such as `v1.0.2`.
 
 ## License
 

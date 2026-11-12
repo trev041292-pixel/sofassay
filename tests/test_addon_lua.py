@@ -23,6 +23,16 @@ function _obj()
   function o:SetBackdrop() end
   function o:SetBackdropColor() end
   function o:SetBackdropBorderColor() end
+  function o:SetTexture() end
+  function o:SetTexCoord() end
+  function o:SetParent(p) self.parent = p end
+  function o:SetFrameLevel(level) self.level = level end
+  function o:RegisterForClicks() end
+  function o:ClearAllPoints() self.point = nil end
+  function o:CreateTexture()
+    local texture = _obj()
+    return texture
+  end
   function o:CreateFontString()
     local fs = _obj()
     _G._fonts[#_G._fonts + 1] = fs
@@ -49,8 +59,14 @@ function _obj()
   return o
 end
 UIParent = _obj()
+Minimap = _obj()
+function Minimap:GetWidth() return 140 end
+function Minimap:GetHeight() return 140 end
+function Minimap:GetEffectiveScale() return 1 end
+function Minimap:GetFrameLevel() return 1 end
 DEFAULT_CHAT_FRAME = _obj()
 GameTooltip = _obj()
+math.atan2 = math.atan2 or function(y, x) return math.atan(y, x) end
 SlashCmdList = {}
 function CreateFrame(kind, name, parent, template)
   local f = _obj()
@@ -60,6 +76,7 @@ function CreateFrame(kind, name, parent, template)
   return f
 end
 function ReloadUI() _G._reloaded = true end
+function GetCursorPosition() return 200, 200 end
 time = os.time
 """
 
@@ -87,6 +104,20 @@ def main() -> int:
     check("defaults created", db["defaultChannel"] == "say" and db["sticky"] is True)
     check("panel hidden at load", lua.eval("WoWVoicePanel:IsShown()") is False)
 
+    check("minimap button created", lua.eval("WoWVoiceMinimapButton ~= nil") is True)
+    check("minimap button shown", lua.eval("WoWVoiceMinimapButton:IsShown()") is True)
+    point = lua.eval("WoWVoiceMinimapButton.point")
+    check(
+        "minimap positioned bottom-left",
+        point is not None and abs(point[4] + 61.28) < 0.5 and abs(point[5] + 51.42) < 0.5,
+        point,
+    )
+
+    lua.eval('WoWVoiceMinimapButton.scripts.OnClick(WoWVoiceMinimapButton, "LeftButton")')
+    check("minimap click opens panel", lua.eval("WoWVoicePanel:IsShown()") is True)
+    lua.eval('WoWVoiceMinimapButton.scripts.OnClick(WoWVoiceMinimapButton, "LeftButton")')
+    check("minimap click closes panel", lua.eval("WoWVoicePanel:IsShown()") is False)
+
     lua.eval('SlashCmdList["WOWVOICE"]("status state=running | channel=Party | mic=Test Mic | last=hello there")')
     check("status stored", lua.eval("WoWVoiceDB.status").startswith("state=running"))
     check("status time set", lua.eval("WoWVoiceDB.statusTime") > 0)
@@ -107,6 +138,30 @@ def main() -> int:
 
     lua.eval('SlashCmdList["WOWVOICE"]("bogus")')
     check("help printed", any("commands:" in m for m in lua.eval("_G._messages").values()))
+    check("help mentions minimap", any("/wvc minimap" in m for m in lua.eval("_G._messages").values()))
+
+    lua.eval('SlashCmdList["WOWVOICE"]("minimap off")')
+    check("minimap off hides button", lua.eval("WoWVoiceDB.showMinimap") is False)
+    check("minimap off button state", lua.eval("WoWVoiceMinimapButton:IsShown()") is False)
+
+    lua.eval('SlashCmdList["WOWVOICE"]("minimap on")')
+    check("minimap on shows button", lua.eval("WoWVoiceDB.showMinimap") is True)
+    check("minimap on button state", lua.eval("WoWVoiceMinimapButton:IsShown()") is True)
+
+    lua.execute("WoWVoiceDB.minimapAngle = 10")
+    lua.eval('SlashCmdList["WOWVOICE"]("minimap reset")')
+    check("minimap reset angle", lua.eval("WoWVoiceDB.minimapAngle") == 220)
+    point = lua.eval("WoWVoiceMinimapButton.point")
+    check(
+        "minimap reset repositions",
+        point is not None and abs(point[4] + 61.28) < 0.5 and abs(point[5] + 51.42) < 0.5,
+        point,
+    )
+
+    lua.eval("WoWVoiceMinimapButton.scripts.OnDragStart(WoWVoiceMinimapButton)")
+    lua.eval("WoWVoiceMinimapButton.scripts.OnUpdate()")
+    lua.eval("WoWVoiceMinimapButton.scripts.OnDragStop(WoWVoiceMinimapButton)")
+    check("drag updates angle", abs(lua.eval("WoWVoiceDB.minimapAngle") - 45) < 0.1)
 
     print()
     print(f"{failures} failure(s)")
