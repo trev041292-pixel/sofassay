@@ -14,6 +14,41 @@ normal chat box. A bundled in-game addon adds a small status/settings panel.
 Button -> beep -> speak -> Button -> text appears in chat
 ```
 
+## Is this allowed? Will I get banned?
+
+**Short version:** it is designed to work like voice dictation for chat, and it
+does not do the things Blizzard bans for. It is **not pre-approved** by
+Blizzard, though, so no third-party tool can promise zero risk.
+
+What it does **not** do:
+
+- **No bots or unattended play.** Every message needs a fresh button press and a
+  person speaking.
+- **No multiboxing or input broadcasting.** One PC, one WoW client, one account.
+- **No memory reading, DLL injection, packet editing, or game-file changes.**
+  It does not hook or inject into `Wow.exe`. The addon uses only the normal
+  addon API, stores settings, and draws a panel; it never sends chat itself.
+- **No background automation.** It does not repeat messages or play the game
+  for you.
+
+The only "automation" is: one button press -> one spoken message -> one chat
+line, typed with ordinary Windows keystrokes (the same way dictation software
+works). Blizzard's enforcement targets bots, automated gameplay, input
+broadcasting to multiple accounts, and cheats, not accessibility or chat input.
+The 2021 [input-broadcasting policy](https://worldofwarcraft.blizzard.com/en-us/news/23558957)
+is about mirroring one keystroke to multiple clients, which this tool does not
+do.
+
+To keep the risk low:
+
+- Stay at the keyboard/controller; do not run it unattended.
+- Do not use it to spam, repeat, or advertise.
+- Do not extend it to gameplay actions (attacks, rotations, movement).
+- Do not combine it with multiboxing or input-broadcasting software.
+
+Blizzard's policies and enforcement can change, and this is not legal advice.
+If you want zero third-party risk, do not use external input tools at all.
+
 ## Requirements
 
 - Windows 10 or 11
