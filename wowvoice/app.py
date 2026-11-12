@@ -116,11 +116,15 @@ class VoiceChatApp:
                     self.recorder.stop()
                 except Exception:  # noqa: BLE001
                     pass
+            busy = False
             if self.worker is not None and self.worker.is_alive():
                 self.worker.join(timeout=2.0)
+                busy = self.worker.is_alive()
             self.triggers.close()
             self.recorder.close()
-            self._push_status("stopped")
+            if not busy:
+                # Do not type the status while a message is still being sent.
+                self._push_status("stopped")
             try:
                 STOP_PATH.unlink(missing_ok=True)
             except OSError:
