@@ -1,23 +1,15 @@
 # WoW Voice Chat
 
 Push-to-talk chat for **World of Warcraft** from the couch, the bed, or anywhere
-a controller beats a keyboard. Press your chosen button (Xbox Share by default),
-wait for the beep, say what you want, then press it again. Your speech is
-transcribed locally and typed into the WoW chat box for you.
-
-> **Connect a headset or microphone to your PC.** The controller button only
-> starts and stops recording; your voice is captured by the headset or mic you
-> already use for calls, Discord, or voice chat.
+a controller beats a keyboard. Connect a headset or microphone, press a button
+on your controller, and your speech is transcribed locally and typed into the
+game chat.
 
 No cloud service, no account, no API key: speech recognition runs on your PC
 with [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
 
 Built for the `_forever_` client, but it works with any WoW client that has the
 normal chat box. A bundled in-game addon adds a small status/settings panel.
-
-```
-Button -> beep -> speak into your headset -> Button -> text appears in chat
-```
 
 **New here?** [Install](#install) · [Using it](#using-it) · [In-game panel](#in-game-panel-addon) · [Troubleshooting](#troubleshooting)
 
