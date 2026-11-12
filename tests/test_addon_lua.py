@@ -45,7 +45,10 @@ function _obj()
     self._shown = true
     if self.scripts and self.scripts.OnShow then self.scripts.OnShow(self) end
   end
-  function o:Hide() self._shown = false end
+  function o:Hide()
+    self._shown = false
+    if self.scripts and self.scripts.OnHide then self.scripts.OnHide(self) end
+  end
   function o:IsShown() return self._shown end
   function o:SetText(t) self.text = t end
   function o:GetText() return self.text end
@@ -91,8 +94,49 @@ ConsolePort = {
     self.frames[#self.frames + 1] = frame
   end,
 }
+-- Native (non-ConsolePort) gamepad pointer, as exposed by the client.
+_G._cursor = false
+function SetGamePadCursorControl(enabled) _G._cursor = enabled end
+function IsGamePadCursorControlEnabled() return _G._cursor end
 time = os.time
 """
+
+
+def native_cursor_checks(source: str) -> int:
+    """The built-in gamepad path, tested with ConsolePort absent."""
+    lua = LuaRuntime()
+    lua.execute(PRELUDE)
+    lua.execute("ConsolePort = nil")
+    lua.execute(source)
+    events = lua.eval("_G._last_frame")
+    events.scripts["OnEvent"](events, "ADDON_LOADED", "SofaSay")
+
+    failures = 0
+
+    def check(label, condition, detail=""):
+        nonlocal failures
+        if condition:
+            print(f"ok   {label}")
+        else:
+            failures += 1
+            print(f"FAIL {label} {detail}")
+
+    check("native pointer off at load", lua.eval("_G._cursor") is False)
+    lua.eval("SofaSay_Toggle()")
+    check("native pointer on while panel open", lua.eval("_G._cursor") is True)
+    fonts = lua.eval("_G._fonts")
+    texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
+    check("native gamepad hint in note", any("pointer turns on" in t for t in texts), texts)
+    lua.eval("SofaSay_Toggle()")
+    check("native pointer off after panel closes", lua.eval("_G._cursor") is False)
+
+    # If the game already had the pointer on, leave it on when the panel closes.
+    lua.execute("_G._cursor = true")
+    lua.eval("SofaSay_Toggle()")
+    check("existing pointer left alone on open", lua.eval("_G._cursor") is True)
+    lua.eval("SofaSay_Toggle()")
+    check("existing pointer left alone on close", lua.eval("_G._cursor") is True)
+    return failures
 
 
 def main() -> int:
@@ -213,6 +257,10 @@ def main() -> int:
 
     lua.eval('SofaSay_Toggle()')
     check("binding toggles panel", lua.eval("SofaSayPanel:IsShown()") is True)
+    check(
+        "consoleport owns the pointer instead of native",
+        lua.eval("_G._cursor") is False,
+    )
 
     lua.eval('SlashCmdList["SOFASAY"]("bogus")')
     check("help printed", any("commands:" in m for m in lua.eval("_G._messages").values()))
@@ -283,6 +331,7 @@ def main() -> int:
     check("help mentions sticky", any("/sofa sticky" in m for m in messages), messages)
 
     print()
+    failures += native_cursor_checks(source)
     print(f"{failures} failure(s)")
     return 1 if failures else 0
 

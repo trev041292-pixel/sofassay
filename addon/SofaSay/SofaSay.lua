@@ -5,7 +5,7 @@
 -- status lines the desktop tool types into chat as "/sofa status ...".
 
 local ADDON_NAME = "SofaSay"
-local VERSION = "2.1.0"
+local VERSION = "2.2.0"
 
 BINDING_HEADER_SOFASAY = "SofaSay"
 BINDING_NAME_TOGGLESOFASAYPANEL = "Toggle SofaSay Panel"
@@ -200,9 +200,49 @@ local function registerWithConsolePort()
 	pcall(cp.AddInterfaceCursorFrame, cp, panel)
 end
 
+-- WoW Forever can drive a pointer with a gamepad without any addon. It is the
+-- same native cursor ConsolePort uses, so when ConsolePort is not installed we
+-- turn it on while the panel is open and put it back afterwards.
+local nativeCursorOwned = false
+
+local function nativeGamepadAvailable()
+	if consolePortAvailable() then
+		return false
+	end
+	return type(_G.SetGamePadCursorControl) == "function"
+		and type(_G.IsGamePadCursorControlEnabled) == "function"
+end
+
+local function enableNativeCursor()
+	if not (panel and nativeGamepadAvailable()) then
+		return
+	end
+	-- If the game already has the pointer on, leave it alone. Otherwise we
+	-- remember that we turned it on so hiding the panel turns it back off.
+	local ok, alreadyOn = pcall(_G.IsGamePadCursorControlEnabled)
+	if ok and alreadyOn then
+		return
+	end
+	local setOk = pcall(_G.SetGamePadCursorControl, true)
+	nativeCursorOwned = setOk and true or false
+end
+
+local function disableNativeCursor()
+	if not nativeCursorOwned then
+		return
+	end
+	nativeCursorOwned = false
+	if type(_G.SetGamePadCursorControl) == "function" then
+		pcall(_G.SetGamePadCursorControl, false)
+	end
+end
+
 local function defaultNote()
 	if consolePortAvailable() then
 		return "Controller: move the pointer with the stick and press A to click. B or Escape closes this panel. Changes save with Save & Reload UI."
+	end
+	if nativeGamepadAvailable() then
+		return "Controller: the pointer turns on while this panel is open. Move it with the stick and press the click button (left stick by default) to pick a channel or toggle a setting. B or Escape closes this panel."
 	end
 	return "Changes are written when you click Save & Reload UI (or log out). The desktop tool applies them within a few seconds."
 end
@@ -605,6 +645,10 @@ local function buildPanel()
 	panel:SetScript("OnShow", function()
 		refreshAll()
 		setNote(defaultNote())
+		enableNativeCursor()
+	end)
+	panel:SetScript("OnHide", function()
+		disableNativeCursor()
 	end)
 
 	-- Keep "Updated 5m ago" honest while the panel is open. The tool sends a

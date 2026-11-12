@@ -27,9 +27,9 @@ Uses normal chat input and a standard addon. Read the
   controllers can be detected too.
 - A **headset or microphone** connected to your PC. The controller button starts
   and stops recording; the audio comes from your headset or mic.
-- World of Warcraft. [ConsolePort](https://www.curseforge.com/wow/addons/consoleport)
-  is optional: it provides the on-screen pointer and controller bindings the
-  in-game panel uses when it is installed.
+- World of Warcraft. A controller works in game with WoW Forever's built-in
+  gamepad support. [ConsolePort](https://www.curseforge.com/wow/addons/consoleport)
+  is optional and gives the panel its own pointer and controller bindings.
 
 ## Install
 
@@ -123,15 +123,21 @@ The panel shows the last status the desktop tool sent it. It switches to
 counts up while the panel is open. Hover the minimap button for the state, talk
 button, channel, and sticky setting.
 
-**With a controller:** if ConsolePort is installed, opening the panel turns on
-its on-screen pointer automatically. Move the pointer with the stick and press
-**A** to click a channel, checkbox, or button. Press **B** (Escape) to close the
-panel. To change channels without opening anything, bind *SofaSay: next channel*
-or *SofaSay: previous channel* to a controller button in ConsolePort's bindings
-(they are listed under **Other**). Both are ordinary WoW bindings, so they also
-work from **Key Bindings** without ConsolePort. The buttons in the panel are
-sized for the pointer, and every setting is also available as a `/sofa`
-command.
+**With a controller:** the panel works with WoW Forever's built-in gamepad
+support and with ConsolePort.
+
+- **Built-in gamepad:** opening the panel turns on the game's own pointer. Move
+  it with the stick and press the click button (**left stick** by default) to
+  pick a channel or toggle a setting. **B** (Escape) closes the panel.
+- **ConsolePort:** opening the panel turns on ConsolePort's pointer
+  automatically. Move it with the stick, press **A** to click, and **B** to
+  close.
+
+The panel buttons are sized for the pointer, and every setting is also
+available as a `/sofa` command. To change channels without opening anything,
+bind *SofaSay: next channel* or *SofaSay: previous channel* to a controller
+button in ConsolePort (under **Other**) or in **Key Bindings**, where gamepad
+buttons appear when a controller is connected.
 
 If the tool was already running when the game started, the startup status never
 reached the addon; the panel catches up after your first message goes through.
@@ -176,7 +182,7 @@ Useful commands:
 - **Start when this window opens** - starts listening automatically (on by
   default). Uncheck it if you prefer to press **Start** yourself.
 - **Log** - live output, also written to `sofassay.log`.
-- **v2.1.0 · Check for updates** - opens the latest Releases page.
+- **v2.2.0 · Check for updates** - opens the latest Releases page.
 
 Only one panel opens at a time. Closing it stops the tool. If the shortcut is
 missing, run `panel.bat`; `run.bat` starts the console version.
@@ -418,11 +424,11 @@ Local build:
 
 ```text
 powershell -ExecutionPolicy Bypass -File package.ps1
-gh release create v2.1.0 dist\SofaSay-2.1.0.zip --title "SofaSay 2.1.0"
+gh release create v2.2.0 dist\SofaSay-2.2.0.zip --title "SofaSay 2.2.0"
 ```
 
 The GitHub Actions workflows run the tests on every push and build/upload the
-ZIP automatically when you push a tag such as `v2.1.0`.
+ZIP automatically when you push a tag such as `v2.2.0`.
 
 ## License
 
