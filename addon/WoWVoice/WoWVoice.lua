@@ -5,7 +5,7 @@
 -- status lines the desktop tool types into chat as "/wvc status ...".
 
 local ADDON_NAME = "WoWVoice"
-local VERSION = "1.0.0"
+local VERSION = "1.0.1"
 
 BINDING_HEADER_WOWVOICE = "WoW Voice Chat"
 BINDING_NAME_TOGGLEWOWVOICEPANEL = "Toggle WoWVoice Panel"

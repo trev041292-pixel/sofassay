@@ -168,7 +168,7 @@ class ControlPanel(tk.Tk):
 
         ttk.Label(
             outer,
-            text="Press Share (or F9) in game to talk. Closing this window stops the tool.",
+            text="Press your talk button (Share, or F9) in game to talk. Closing this window stops the tool.",
             font=("Segoe UI", 8),
             foreground="#666666",
         ).pack(anchor="w")
@@ -185,8 +185,8 @@ class ControlPanel(tk.Tk):
 
     def _idle_detail(self) -> str:
         if self.recording:
-            return "Recording \u2014 press Share again to send."
-        return "Running \u2014 press Share (or F9) to talk."
+            return "Recording \u2014 press your talk button again to send."
+        return "Running \u2014 press your talk button (Share, or F9) to talk."
 
     @staticmethod
     def _python_exe() -> Path:

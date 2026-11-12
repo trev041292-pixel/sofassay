@@ -1,9 +1,8 @@
 # WoW Voice Chat
 
-Push-to-talk chat for **World of Warcraft** played with an Xbox controller.
-Press the controller's **Share** button, wait for the beep, say what you want,
-then press **Share** again. Your speech is transcribed locally and typed into
-the WoW chat box.
+Push-to-talk chat for **World of Warcraft** on a controller. Press your chosen
+button (Xbox Share by default), wait for the beep, say what you want, then press
+it again. Your speech is transcribed locally and typed into the WoW chat box.
 
 No cloud service, no account, no API key: speech recognition runs on your PC
 with [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
@@ -12,14 +11,16 @@ Built for the `_forever_` client, but it works with any WoW client that has the
 normal chat box. A bundled in-game addon adds a small status/settings panel.
 
 ```
-Share -> beep -> speak -> Share -> text appears in chat
+Button -> beep -> speak -> Button -> text appears in chat
 ```
 
 ## Requirements
 
 - Windows 10 or 11
 - Python 3.12 with the **py launcher** ([python.org](https://www.python.org/downloads/))
-- An Xbox controller (Bluetooth or USB) with a **Share** button, or any keyboard key
+- A controller that Windows sees as a gamepad/joystick, **or** any keyboard key.
+  Xbox Share is the tested default; most PlayStation, Switch Pro, and 8BitDo
+  controllers can be detected too.
 - A microphone
 - World of Warcraft
 
@@ -30,7 +31,8 @@ Share -> beep -> speak -> Share -> text appears in chat
    `Program Files`).
 2. Double-click **`setup.bat`**. It creates a private Python environment,
    installs the packages, downloads the speech model once (about 500 MB), and
-   creates a desktop shortcut.
+   creates a desktop shortcut. If Python 3.12 is missing, setup offers to
+   install it automatically with winget.
 3. The setup window opens at the end. Choose:
    - **World of Warcraft folder** - use **Find**, or **Browse** and pick the
      folder that contains `Wow.exe` (for example
@@ -40,8 +42,9 @@ Share -> beep -> speak -> Share -> text appears in chat
    - **Talk button** - see below.
    - **In-game panel** - press **Install / Update** to copy the addon into
      `Interface\AddOns`.
-4. Press **Save & Finish**, then launch **WoW Voice Chat** from the desktop
-   shortcut and press **Start**.
+4. Press **Save & Finish**. The control panel opens; press **Start**, then switch
+   to World of Warcraft. Next time, launch **WoW Voice Chat** from the desktop
+   shortcut.
 
 If Windows' **Smart App Control** asks about Python or a DLL the first time,
 allow it. It is a one-time reputation check.
@@ -55,23 +58,28 @@ changed there, including after the first run.
 
 The setup window offers three modes:
 
-- **Controller Share button** - detect it automatically, or enter the HID
-  byte/bit yourself.
+- **Controller button** - the Xbox Share button is already configured. For
+  another controller, press **Detect button**.
 - **Keyboard key** - choose F1-F12, Space, Tab, Mouse 4, or Mouse 5.
-- **Both** - Share *and* a keyboard key work (handy for testing).
+- **Both** - the controller button *and* a keyboard key work (handy for testing).
 
-For most Xbox controllers the Share button is already configured (report byte
-12, bit `0x08`). For a different controller:
+For a non-Xbox controller:
 
-1. Choose **Controller Share button**.
+1. Choose **Controller button**.
 2. Press **Detect button**, then press the button you want **three times**.
 3. Press **Test** and press it a few more times. The wizard reports how many
    presses it saw.
-4. If detection fails, use **`run.bat --raw-debug --seconds 30`**, press the
-   button once, and set the byte/bit that changed.
+4. If detection fails, open **Advanced** and use
+   **`run.bat --raw-debug --seconds 30`**: press the button once and enter the
+   byte/bit that changed.
 
-Steam Input can hide the controller from Windows. If nothing is detected, close
-Steam or disable Steam Input for the controller.
+Most controllers work this way, including PlayStation, Switch Pro, and 8BitDo
+models. The controller must be visible to Windows as a HID device: **Steam
+Input** or **DS4Windows** can hide or remap it. If your controller emulates a
+keyboard instead, use the **Keyboard key** mode and bind that key.
+
+The manual **Byte** and **Bit mask** fields are hidden under **Advanced** and
+are not needed for normal setup.
 
 ## In-game panel (addon)
 
@@ -104,9 +112,10 @@ Useful commands:
 
 ## Using it
 
-1. Press **Share** (or your chosen key). You hear a short beep.
+1. Press your talk button (**Share** on Xbox, or your chosen key). You hear a
+   short beep.
 2. Say your message. Start with a channel name to switch channels.
-3. Press **Share** again. You hear a lower beep and the message is sent.
+3. Press the talk button again. You hear a lower beep and the message is sent.
 
 Examples (this is what the routing does with your speech):
 
@@ -272,7 +281,7 @@ package.ps1             builds the release ZIP in dist\
 selftest.py             routing checks that need no hardware
 wowvoice/config.py      defaults and channel list
 wowvoice/routing.py     spoken channel parser and sticky state
-wowvoice/controller.py  Xbox Share button via Raw Input, hotkey fallback
+wowvoice/controller.py  controller button via Raw Input, hotkey fallback
 wowvoice/recorder.py    microphone capture
 wowvoice/transcriber.py local faster-whisper speech-to-text
 wowvoice/wowinput.py    focus, keyboard input, chat delivery
@@ -302,11 +311,11 @@ Local build:
 
 ```text
 powershell -ExecutionPolicy Bypass -File package.ps1
-gh release create v1.0.0 dist\WoWVoiceChat-1.0.0.zip --title "WoWVoiceChat 1.0.0"
+gh release create v1.0.1 dist\WoWVoiceChat-1.0.1.zip --title "WoWVoiceChat 1.0.1"
 ```
 
 The GitHub Actions workflows run the tests on every push and build/upload the
-ZIP automatically when you push a tag such as `v1.0.0`.
+ZIP automatically when you push a tag such as `v1.0.1`.
 
 ## License
 

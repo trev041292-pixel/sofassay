@@ -58,7 +58,7 @@ class VoiceChatApp:
         print(f"  Sticky channel: {self.router.describe()}")
         print(f"  Dry run       : {'yes (nothing is sent to WoW)' if self.dry_run else 'no'}")
         print()
-        print("  Press the Capture/Share button (or F9) to start talking.")
+        print("  Press the controller button (or F9) to start talking.")
         print("  Press it again to stop, transcribe, and send.")
         print("  Ctrl+C quits.")
         print("=" * 66)
@@ -81,7 +81,7 @@ class VoiceChatApp:
 
         trigger_names = self.triggers.start()
         if trigger_names == "none":
-            self.log("No input trigger available. Connect the Xbox controller or set trigger.mode to 'hotkey'.")
+            self.log("No input trigger available. Connect your controller or set trigger.mode to 'hotkey'.")
             return 1
 
         self._start_addon_watcher()

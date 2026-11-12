@@ -59,8 +59,13 @@ class SetupWizard(tk.Toplevel):
 
         ttk.Label(
             outer,
-            text="Tell the tool which game, microphone and button to use.",
+            text=(
+                "Three quick checks: game folder, microphone, and talk button. "
+                "Most of it is detected for you."
+            ),
             font=("Segoe UI", 10),
+            wraplength=560,
+            justify="left",
         ).pack(anchor="w", pady=(0, 10))
 
         # Game folder ---------------------------------------------------
@@ -71,7 +76,8 @@ class SetupWizard(tk.Toplevel):
         ttk.Entry(row, textvariable=self.game_var, width=58).pack(side="left", fill="x", expand=True)
         ttk.Button(row, text="Browse...", command=self._browse_game).pack(side="left", padx=(6, 0))
         ttk.Button(row, text="Find", command=self._find_game).pack(side="left", padx=(6, 0))
-        self.game_status = ttk.Label(game, text="", font=("Segoe UI", 8))
+        self.game_status = ttk.Label(game, text="", font=("Segoe UI", 8), wraplength=560,
+                                     justify="left")
         self.game_status.pack(anchor="w", pady=(6, 0))
 
         # Microphone ----------------------------------------------------
@@ -83,7 +89,8 @@ class SetupWizard(tk.Toplevel):
         self.mic_box.pack(side="left", fill="x", expand=True)
         ttk.Button(row, text="Refresh", width=9, command=self._load_mics).pack(side="left", padx=(6, 0))
         ttk.Button(row, text="Test", width=7, command=self._test_mic).pack(side="left", padx=(6, 0))
-        self.mic_status = ttk.Label(mic, text="", font=("Segoe UI", 8))
+        self.mic_status = ttk.Label(mic, text="", font=("Segoe UI", 8), wraplength=560,
+                                    justify="left")
         self.mic_status.pack(anchor="w", pady=(6, 0))
 
         # Talk button ---------------------------------------------------
@@ -92,7 +99,7 @@ class SetupWizard(tk.Toplevel):
 
         modes = ttk.Frame(trigger)
         modes.pack(fill="x")
-        ttk.Radiobutton(modes, text="Controller Share button", value="controller",
+        ttk.Radiobutton(modes, text="Controller button", value="controller",
                         variable=self.mode_var, command=self._update_mode).pack(side="left")
         ttk.Radiobutton(modes, text="Keyboard key", value="hotkey",
                         variable=self.mode_var, command=self._update_mode).pack(side="left", padx=(14, 0))
@@ -102,16 +109,33 @@ class SetupWizard(tk.Toplevel):
         controller_row = ttk.Frame(trigger)
         controller_row.pack(fill="x", pady=(8, 0))
         self.controller_frame = controller_row
-        ttk.Label(controller_row, text="Byte").pack(side="left")
-        self.byte_spin = ttk.Spinbox(controller_row, from_=0, to=63, width=4, textvariable=self.byte_var)
-        self.byte_spin.pack(side="left", padx=(4, 10))
-        ttk.Label(controller_row, text="Bit mask").pack(side="left")
-        self.mask_entry = ttk.Entry(controller_row, width=6, textvariable=self.mask_var)
-        self.mask_entry.pack(side="left", padx=(4, 10))
         self.detect_btn = ttk.Button(controller_row, text="Detect button", command=self._detect_button)
         self.detect_btn.pack(side="left")
         self.test_btn = ttk.Button(controller_row, text="Test", command=self._test_button)
         self.test_btn.pack(side="left", padx=(6, 0))
+        self.controller_summary = ttk.Label(controller_row, text="", font=("Segoe UI", 8),
+                                            foreground="#666666")
+        self.controller_summary.pack(side="left", padx=(10, 0))
+
+        self.advanced = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            trigger,
+            text="Advanced: set the controller byte/bit manually",
+            variable=self.advanced,
+            command=self._toggle_advanced,
+        ).pack(anchor="w", pady=(6, 0))
+
+        self.advanced_row = ttk.Frame(trigger)
+        ttk.Label(self.advanced_row, text="Byte").pack(side="left")
+        self.byte_spin = ttk.Spinbox(self.advanced_row, from_=0, to=63, width=4,
+                                     textvariable=self.byte_var)
+        self.byte_spin.pack(side="left", padx=(4, 10))
+        ttk.Label(self.advanced_row, text="Bit mask").pack(side="left")
+        self.mask_entry = ttk.Entry(self.advanced_row, width=6, textvariable=self.mask_var)
+        self.mask_entry.pack(side="left", padx=(4, 10))
+        ttk.Button(
+            self.advanced_row, text="Reset to Xbox Share", command=self._reset_controller
+        ).pack(side="left")
 
         key_row = ttk.Frame(trigger)
         key_row.pack(fill="x", pady=(8, 0))
@@ -123,8 +147,16 @@ class SetupWizard(tk.Toplevel):
         self.test_key_btn = ttk.Button(key_row, text="Test", command=self._test_key)
         self.test_key_btn.pack(side="left")
 
-        self.trigger_status = ttk.Label(trigger, text="", font=("Segoe UI", 8), wraplength=560,
-                                        justify="left")
+        self.trigger_status = ttk.Label(
+            trigger,
+            text=(
+                "Xbox controllers already use the Share button. Press Test; if nothing "
+                "is detected, press Detect and then press your button three times."
+            ),
+            font=("Segoe UI", 8),
+            wraplength=560,
+            justify="left",
+        )
         self.trigger_status.pack(anchor="w", pady=(8, 0))
 
         # Addon ---------------------------------------------------------
@@ -149,6 +181,9 @@ class SetupWizard(tk.Toplevel):
         ttk.Button(footer, text="Cancel", command=self.destroy).pack(side="right", padx=(0, 6))
 
         self._update_mode()
+        self._update_controller_summary()
+        self.byte_var.trace_add("write", lambda *_: self._update_controller_summary())
+        self.mask_var.trace_add("write", lambda *_: self._update_controller_summary())
         self._update_game_status()
 
     # ------------------------------------------------------------------
@@ -295,6 +330,31 @@ class SetupWizard(tk.Toplevel):
             widget.state(["!disabled"] if mode in ("auto", "controller") else ["disabled"])
         for widget in (self.key_box, self.test_key_btn):
             widget.state(["!disabled"] if mode in ("auto", "hotkey") else ["disabled"])
+
+    def _toggle_advanced(self) -> None:
+        if self.advanced.get():
+            self.advanced_row.pack(fill="x", pady=(6, 0))
+        else:
+            self.advanced_row.pack_forget()
+
+    def _update_controller_summary(self) -> None:
+        try:
+            byte = int(self.byte_var.get() or 0)
+            mask = int(self.mask_var.get() or "0", 16)
+        except ValueError:
+            self.controller_summary.configure(text="Custom button")
+            return
+        if byte == 12 and mask == 0x08:
+            self.controller_summary.configure(text="Xbox Share default (byte 12, bit 0x08)")
+        else:
+            self.controller_summary.configure(text=f"Custom button: byte {byte}, bit 0x{mask:02X}")
+
+    def _reset_controller(self) -> None:
+        self.byte_var.set("12")
+        self.mask_var.set("0x08")
+        self.trigger_status.configure(
+            text="Reset to the Xbox Share default. Press Test to confirm it still works."
+        )
 
     def _manual_trigger_cfg(self) -> dict:
         cfg = {

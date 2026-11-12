@@ -1,6 +1,6 @@
 # Builds the shareable ZIP in dist\.
 #   powershell -ExecutionPolicy Bypass -File package.ps1
-param([string]$Version = '1.0.0')
+param([string]$Version = '1.0.1')
 
 $ErrorActionPreference = 'Stop'
 

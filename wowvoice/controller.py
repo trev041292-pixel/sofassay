@@ -1,12 +1,14 @@
-"""Xbox Capture/Share button input.
+"""Controller button input via Windows Raw Input.
 
-The Share button is not exposed by XInput, and this Windows build's GameInput
-only provides the legacy interface (which has no Share support). However the
-controller's HID reports *are* delivered through Raw Input, and Raw Input's
-``RIDEV_INPUTSINK`` flag lets us see them while another app (WoW) has focus.
+The Xbox Share button is not exposed by XInput, and this Windows build's
+GameInput only provides the legacy interface (which has no Share support).
+However controller HID reports *are* delivered through Raw Input, and Raw
+Input's ``RIDEV_INPUTSINK`` flag lets us see them while another app (WoW) has
+focus.
 
 On the Xbox Wireless Controller tested here the report is 16 bytes and Share
-is ``byte 12, bit 0x08``. Both values are configurable for other controllers.
+is ``byte 12, bit 0x08``. Both values are configurable, and the setup window
+can detect the byte/bit for other controllers.
 """
 from __future__ import annotations
 
@@ -31,7 +33,7 @@ RIM_TYPEHID = 2
 RIDEV_INPUTSINK = 0x00000100
 HID_USAGE_PAGE_GENERIC = 0x01
 HID_USAGE_GAMEPAD = 0x05
-# The Share button can arrive on the gamepad, joystick, or consumer-control
+# The button can arrive on the gamepad, joystick, or consumer-control
 # collection of the same controller, so listen to all three (as the working
 # hardware probe did).
 RAW_USAGES = ((HID_USAGE_PAGE_GENERIC, HID_USAGE_GAMEPAD),
@@ -109,13 +111,13 @@ RAWHID_OFFSET = HEADER_SIZE  # dwSizeHid, dwCount, then the report bytes
 
 
 class RawInputTrigger:
-    """Receives gamepad HID reports and turns Share presses into events."""
+    """Receives controller HID reports and turns button presses into events."""
 
-    name = "Xbox Share button"
+    name = "controller button"
 
     def __init__(self, cfg: dict, log=print, debug: bool = False, capture: bool = False):
         trigger = cfg.get("trigger", {})
-        self.share_byte = int(trigger.get("share_byte", 13))
+        self.share_byte = int(trigger.get("share_byte", 12))
         self.share_mask = int(trigger.get("share_mask", 0x08))
         self.log = log
         self.debug = debug

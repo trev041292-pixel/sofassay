@@ -25,7 +25,7 @@ def show_devices(cfg: dict) -> None:
         print(f"Selected input  : unavailable ({exc})")
     print(f"Hotkey fallback : {cfg['trigger']['hotkey']}")
     print(
-        "Share button    : "
+        "Controller     : "
         f"byte {cfg['trigger']['share_byte']}, "
         f"mask 0x{int(cfg['trigger']['share_mask']):02X}"
     )
@@ -40,7 +40,7 @@ def show_devices(cfg: dict) -> None:
 def test_trigger(cfg: dict, seconds: int = 30) -> None:
     manager = TriggerManager(cfg)
     print(f"Trigger sources: {manager.start()}")
-    print(f"Press the Capture/Share button (or the hotkey) for {seconds} seconds...")
+    print(f"Press the controller button (or the hotkey) for {seconds} seconds...")
     end = time.time() + seconds
     try:
         while time.time() < end:
@@ -56,7 +56,7 @@ def raw_debug(cfg: dict, seconds: int = 30) -> None:
     if not trigger.start():
         return
     print(f"Showing raw controller reports for {seconds} seconds.")
-    print("Press Capture/Share once and watch which byte/bit changes.")
+    print("Press the controller button once and watch which byte/bit changes.")
     end = time.time() + seconds
     try:
         while time.time() < end:
