@@ -106,8 +106,10 @@ Channel numbers can differ between clients. Edit the `command` values in
 The addon is included in the ZIP and installed by the setup window. In game:
 
 1. Type **`/reload`** (or restart WoW) so the addon loads.
-2. Type **`/sofa`** to open the panel. You can also bind
-   *Toggle SofaSay Panel* in **Key Bindings**.
+2. Type **`/sofa`** to open the panel. With a controller, bind
+   *Toggle SofaSay Panel* once in **Key Bindings** (gamepad buttons appear
+   there when a controller is connected) so you can open it without the
+   keyboard. You can also bind it in ConsolePort if you use that.
 3. A sofa icon also sits by the minimap (bottom-left by default). Click it to
    open the panel, drag it around the minimap to move it, or right-click it to
    snap it back to the default spot. It is tinted **green** while the tool is
