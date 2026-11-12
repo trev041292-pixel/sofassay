@@ -21,7 +21,7 @@ from .wowinput import send_chat
 
 ADDON_NAME = "WoWVoice"
 SAVEDVARS_FILE = f"{ADDON_NAME}.lua"
-ADDON_VERSION = "1.0.2"
+ADDON_VERSION = "1.0.3"
 
 # Addon key -> (config section, config key, converter)
 SETTING_MAP = {

@@ -130,6 +130,19 @@ def main() -> int:
     check("channel rendered", any("Channel: Party" in t for t in texts), texts)
     check("last message rendered", any("Last: hello there" in t for t in texts), texts)
 
+    # The age label ticks while the panel stays open.
+    lua.execute("WoWVoiceDB.statusTime = time() - 130")
+    lua.eval("WoWVoicePanel.scripts.OnUpdate(WoWVoicePanel, 20)")
+    fonts = lua.eval("_G._fonts")
+    texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
+    check("status age ticks", any(t == "Updated 2m ago" for t in texts), texts)
+
+    lua.eval('SlashCmdList["WOWVOICE"]("status state=stopped")')
+    fonts = lua.eval("_G._fonts")
+    texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
+    check("stopped headline", any("Tool stopped" in t for t in texts), texts)
+    check("stopped age label", any(t == "Stopped just now" for t in texts), texts)
+
     lua.eval('SlashCmdList["WOWVOICE"]("hide")')
     check("hide closes panel", lua.eval("WoWVoicePanel:IsShown()") is False)
 

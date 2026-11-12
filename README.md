@@ -1,8 +1,9 @@
 # WoW Voice Chat
 
-Push-to-talk chat for **World of Warcraft** on a controller. Press your chosen
-button (Xbox Share by default), wait for the beep, say what you want, then press
-it again. Your speech is transcribed locally and typed into the WoW chat box.
+Push-to-talk chat for **World of Warcraft** from the couch, the bed, or anywhere
+a controller beats a keyboard. Press your chosen button (Xbox Share by default),
+wait for the beep, say what you want, then press it again. Your speech is
+transcribed locally and typed into the WoW chat box for you.
 
 No cloud service, no account, no API key: speech recognition runs on your PC
 with [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
@@ -113,8 +114,12 @@ The addon is included in the ZIP and installed by the setup window. In game:
 5. Press **Save & Reload UI**. The addon saves on `/reload` or logout, and the
    desktop tool applies the new settings within a few seconds.
 
-The panel shows the last status the desktop tool sent it. Use **Send status to
-game** in the control panel to push the current state manually.
+The panel shows the last status the desktop tool sent it. It switches to
+**Tool running** when you press **Start** and **Tool stopped** when you press
+**Stop**, so it does not keep showing an old state. The *Updated ...* line
+counts up while the panel is open. If it ever looks out of date (for example,
+the tool was closed from Task Manager or started before WoW), press
+**Send status to game** in the control panel to push it again.
 
 WoW addons cannot open sockets or read arbitrary files, so the two sides
 communicate indirectly:
@@ -137,13 +142,20 @@ Useful commands:
 - **Start / Stop** - loads the speech model and begins listening, or shuts down
   and frees the microphone.
 - **Setup...** - game folder, microphone, talk button, addon installation.
-- **Send status to game** - types `/wvc status ...` so the in-game panel updates.
+- **Send status to game** - pushes the current state to the in-game panel. The
+  tool already does this automatically on Start and Stop; use the button if the
+  panel looks out of date.
 - **Open config** - edits `config.json`.
 - **Always on top** - keeps the window visible over the game.
 - **Log** - live output, also written to `wow-voicechat.log`.
 
 Only one panel opens at a time. Closing it stops the tool. If the shortcut is
 missing, run `panel.bat`; `run.bat` starts the console version.
+
+Start and Stop each send one `/wvc status ...` line to the game, so the in-game
+panel always shows whether the tool is running. That briefly brings WoW to the
+front. Set `addon.sync_status` to `false` if you would rather update the panel
+only with the **Send status to game** button.
 
 ## Changing the microphone or talk button
 
@@ -214,8 +226,8 @@ is the safe way to change it; these are the useful keys:
   "addon": {
     "enabled": true,
     "use_in_game_settings": true,   // addon settings override this file
-    "push_status_on_start": false,  // type /wvc status when the tool starts
-    "announce_status": false        // update the panel after every message
+    "sync_status": true,            // panel says running/stopped with the tool
+    "announce_status": false        // also update the panel after every message
   },
   "chat": {
     "default_channel": "say",
@@ -302,6 +314,11 @@ If you want zero third-party risk, do not use external input tools at all.
 - **Addon changes do not apply immediately.** The game only writes
   SavedVariables on `/reload` or logout. Press **Save & Reload UI** in the panel,
   then wait a few seconds.
+- **The in-game panel says "Tool running" but the tool is closed.** The panel
+  only knows what the desktop tool last told it. If the tool was killed from
+  Task Manager (or started while WoW was closed), it could not send the final
+  update. Press **Send status to game** in the control panel, or Start and Stop
+  the tool once. Check that `addon.sync_status` is `true` in `config.json`.
 - **Share also opens Xbox Game Bar or takes a screenshot.** Turn that shortcut
   off in Windows Settings -> Gaming -> Xbox Game Bar. The tool still receives
   the button.
@@ -359,11 +376,11 @@ Local build:
 
 ```text
 powershell -ExecutionPolicy Bypass -File package.ps1
-gh release create v1.0.2 dist\WoWVoiceChat-1.0.2.zip --title "WoWVoiceChat 1.0.2"
+gh release create v1.0.3 dist\WoWVoiceChat-1.0.3.zip --title "WoWVoiceChat 1.0.3"
 ```
 
 The GitHub Actions workflows run the tests on every push and build/upload the
-ZIP automatically when you push a tag such as `v1.0.2`.
+ZIP automatically when you push a tag such as `v1.0.3`.
 
 ## License
 

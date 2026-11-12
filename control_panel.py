@@ -13,6 +13,7 @@ import queue
 import subprocess
 import sys
 import threading
+import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, scrolledtext, ttk
@@ -21,6 +22,9 @@ APP_DIR = Path(__file__).resolve().parent
 MAIN = APP_DIR / "main.py"
 LOG_PATH = APP_DIR / "wow-voicechat.log"
 PID_PATH = APP_DIR / "wow-voicechat.pid"
+# Keep in sync with wowvoice/config.py: the tool watches this file and shuts
+# down gracefully so it can tell the in-game panel it has stopped.
+STOP_PATH = APP_DIR / "wow-voicechat.stop"
 
 CREATE_NO_WINDOW = 0x08000000
 CREATE_NEW_PROCESS_GROUP = 0x00000200
@@ -90,6 +94,7 @@ class ControlPanel(tk.Tk):
         self.events: queue.Queue[str] = queue.Queue()
         self.recording = False
         self.exit_reported = False
+        self.stopping = False
         self.closing = False
         self.tick_job: str | None = None
         self.drain_job: str | None = None
@@ -147,7 +152,7 @@ class ControlPanel(tk.Tk):
         ).pack(side="left")
         ttk.Label(
             addon_row,
-            text="Types /wvc status ... so the in-game panel shows the current state.",
+            text="The panel updates on Start/Stop. Use this if it looks out of date.",
             font=("Segoe UI", 8),
             foreground="#666666",
         ).pack(side="left", padx=(8, 0))
@@ -222,7 +227,12 @@ class ControlPanel(tk.Tk):
             return
 
         clear_pid_file()
+        try:
+            STOP_PATH.unlink()
+        except OSError:
+            pass
         self.exit_reported = False
+        self.stopping = False
         self.recording = False
         try:
             self.proc = subprocess.Popen(
@@ -249,6 +259,8 @@ class ControlPanel(tk.Tk):
         self.stop_btn.state(["!disabled"])
 
     def stop_app(self) -> None:
+        if self.stopping:
+            return
         pid = self._running_pid()
         if self.proc is not None and self.proc.poll() is None:
             target = self.proc.pid
@@ -262,13 +274,28 @@ class ControlPanel(tk.Tk):
             return
 
         self._append(f"\u2014 stopping (pid {target}) \u2014")
-        self._kill_tree(target)
-        self.proc = None
-        self.recording = False
-        self.exit_reported = False
-        self._set_state("Stopped", COLOR_STOPPED)
-        self.start_btn.state(["!disabled"])
+        self.stopping = True
+        self._set_state("Stopping \u2014 updating the in-game panel\u2026", COLOR_BUSY)
+        self.start_btn.state(["disabled"])
         self.stop_btn.state(["disabled"])
+        try:
+            STOP_PATH.write_text(str(target), encoding="utf-8")
+        except OSError:
+            pass
+        threading.Thread(target=self._stop_watchdog, args=(target,), daemon=True).start()
+
+    def _stop_watchdog(self, target: int, grace: float = 5.0) -> None:
+        """Give the tool time to send 'stopped', then force it closed."""
+        deadline = time.monotonic() + grace
+        while time.monotonic() < deadline and pid_alive(target):
+            time.sleep(0.1)
+        if pid_alive(target):
+            self.events.put("\u2014 the tool did not stop in time; closing it \u2014")
+            self._kill_tree(target)
+        try:
+            STOP_PATH.unlink()
+        except OSError:
+            pass
 
     @staticmethod
     def _kill_tree(pid: int) -> None:
@@ -338,6 +365,17 @@ class ControlPanel(tk.Tk):
         if pid is not None and not pid_alive(pid):
             clear_pid_file()
             pid = None
+
+        if self.stopping:
+            if pid is None:
+                self.stopping = False
+            else:
+                self._set_state("Stopping \u2014 updating the in-game panel\u2026", COLOR_BUSY)
+                self.start_btn.state(["disabled"])
+                self.stop_btn.state(["disabled"])
+                if reschedule:
+                    self.tick_job = self.after(500, self._tick)
+                return
 
         if pid is not None:
             self._set_state(self._idle_detail(), COLOR_RUNNING)
@@ -482,7 +520,10 @@ class ControlPanel(tk.Tk):
         self.attributes("-topmost", self.topmost.get())
 
     def _on_close(self) -> None:
-        if self._running_pid() and not messagebox.askyesno(
+        pid = self._running_pid()
+        if self.proc is not None and self.proc.poll() is None:
+            pid = self.proc.pid
+        if pid and not messagebox.askyesno(
             WINDOW_TITLE, "Stop WoW Voice Chat and close this window?"
         ):
             return
@@ -493,7 +534,21 @@ class ControlPanel(tk.Tk):
                     self.after_cancel(job)
                 except tk.TclError:
                     pass
-        self.stop_app()
+        if pid is not None:
+            try:
+                STOP_PATH.write_text(str(pid), encoding="utf-8")
+            except OSError:
+                pass
+            deadline = time.monotonic() + 5.0
+            while time.monotonic() < deadline and pid_alive(pid):
+                time.sleep(0.1)
+            if pid_alive(pid):
+                self._kill_tree(pid)
+            try:
+                STOP_PATH.unlink()
+            except OSError:
+                pass
+            self.proc = None
         self.destroy()
 
 

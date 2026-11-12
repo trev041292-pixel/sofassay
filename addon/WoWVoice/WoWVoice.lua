@@ -5,7 +5,7 @@
 -- status lines the desktop tool types into chat as "/wvc status ...".
 
 local ADDON_NAME = "WoWVoice"
-local VERSION = "1.0.2"
+local VERSION = "1.0.3"
 
 BINDING_HEADER_WOWVOICE = "WoW Voice Chat"
 BINDING_NAME_TOGGLEWOWVOICEPANEL = "Toggle WoWVoice Panel"
@@ -97,6 +97,26 @@ local function ageText(seconds)
 	return math.floor(seconds / 86400) .. "d ago"
 end
 
+local function updateStatusAge()
+	if not statusAge then
+		return
+	end
+	if not (WoWVoiceDB.statusTime and WoWVoiceDB.statusTime > 0) then
+		statusAge:SetText("No status yet")
+		return
+	end
+	local age = time() - WoWVoiceDB.statusTime
+	if age < 0 then
+		age = 0
+	end
+	local state = statusFields(WoWVoiceDB.status or "").state
+	if state == "stopped" then
+		statusAge:SetText("Stopped " .. ageText(age))
+	else
+		statusAge:SetText("Updated " .. ageText(age))
+	end
+end
+
 local function setNote(text)
 	if noteText then
 		noteText:SetText(text or "")
@@ -156,15 +176,7 @@ local function refreshStatus()
 		statusLast:SetText("")
 	end
 
-	if WoWVoiceDB.statusTime and WoWVoiceDB.statusTime > 0 then
-		local age = time() - WoWVoiceDB.statusTime
-		if age < 0 then
-			age = 0
-		end
-		statusAge:SetText("Updated " .. ageText(age))
-	else
-		statusAge:SetText("No status yet")
-	end
+	updateStatusAge()
 end
 
 refreshAll = function()
@@ -461,6 +473,18 @@ local function buildPanel()
 
 	panel:SetScript("OnShow", function()
 		refreshAll()
+	end)
+
+	-- Keep "Updated 5m ago" honest while the panel is open. The tool sends a
+	-- fresh status when it starts, stops, or (optionally) after a message.
+	local ageSeconds = 0
+	panel:SetScript("OnUpdate", function(_, elapsed)
+		ageSeconds = ageSeconds + (elapsed or 0)
+		if ageSeconds < 15 then
+			return
+		end
+		ageSeconds = 0
+		updateStatusAge()
 	end)
 
 	refreshAll()

@@ -3,6 +3,7 @@
 config.json
 *.log
 *.pid
+*.stop
 
 # Python
 __pycache__/

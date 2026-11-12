@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import beeps, wowinput
 from . import addon_bridge
-from .config import APP_DIR
+from .config import APP_DIR, STOP_PATH
 from .controller import TriggerManager
 from .recorder import Recorder
 from .routing import Router
@@ -34,6 +34,7 @@ class VoiceChatApp:
         self.worker: threading.Thread | None = None
         self.stopping = threading.Event()
         self._last_trigger = 0.0
+        self._next_stop_check = 0.0
         self.addon_watcher: addon_bridge.SettingsWatcher | None = None
 
     # ------------------------------------------------------------------
@@ -67,6 +68,10 @@ class VoiceChatApp:
     # ------------------------------------------------------------------
     def run(self) -> int:
         try:
+            STOP_PATH.unlink(missing_ok=True)
+        except OSError:
+            pass
+        try:
             self.transcriber.load()
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not load the speech model: {exc}")
@@ -86,10 +91,13 @@ class VoiceChatApp:
 
         self._start_addon_watcher()
         self._banner(trigger_names)
-        self._push_status_on_start()
+        self._push_status("running")
 
         try:
             while not self.stopping.is_set():
+                if self._stop_requested():
+                    self.log("Stop requested by the control panel.")
+                    break
                 for _ in self.triggers.poll():
                     self._on_trigger()
                 if self.recording:
@@ -108,9 +116,27 @@ class VoiceChatApp:
                     self.recorder.stop()
                 except Exception:  # noqa: BLE001
                     pass
+            if self.worker is not None and self.worker.is_alive():
+                self.worker.join(timeout=2.0)
             self.triggers.close()
             self.recorder.close()
+            self._push_status("stopped")
+            try:
+                STOP_PATH.unlink(missing_ok=True)
+            except OSError:
+                pass
         return 0
+
+    def _stop_requested(self) -> bool:
+        """Check the control panel's stop file at most twice a second."""
+        now = time.monotonic()
+        if now < self._next_stop_check:
+            return False
+        self._next_stop_check = now + 0.5
+        try:
+            return STOP_PATH.exists()
+        except OSError:
+            return False
 
     def stop(self) -> None:
         self.stopping.set()
@@ -160,12 +186,21 @@ class VoiceChatApp:
             parts.append(f"last={last[:90]}")
         return parts
 
-    def _push_status_on_start(self) -> None:
-        if not (self.cfg.get("addon") or {}).get("push_status_on_start"):
+    def _push_status(self, state: str = "running", last: str | None = None) -> None:
+        """Tell the in-game panel whether the tool is on (or off)."""
+        options = self.cfg.get("addon") or {}
+        if self.dry_run or not options.get("sync_status", True):
+            return
+        chat = self.cfg.get("chat") or {}
+        if not wowinput.find_wow_window(
+            chat.get("window_process", "Wow.exe"),
+            chat.get("window_title", "World of Warcraft"),
+        ):
+            self.log("In-game panel: WoW is not running, so the status was not sent.")
             return
         addon_bridge.push_status(
             self.cfg,
-            addon_bridge.build_status(*self._status_parts()),
+            addon_bridge.build_status(*self._status_parts(state=state, last=last)),
             log=self.log,
         )
 
@@ -248,11 +283,7 @@ class VoiceChatApp:
             if ok:
                 beeps.beep("sent")
                 if (self.cfg.get("addon") or {}).get("announce_status"):
-                    addon_bridge.push_status(
-                        self.cfg,
-                        addon_bridge.build_status(*self._status_parts(last=routed.body)),
-                        log=self.log,
-                    )
+                    self._push_status("running", last=routed.body)
             else:
                 beeps.beep("error")
         except Exception as exc:  # noqa: BLE001

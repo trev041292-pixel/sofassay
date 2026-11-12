@@ -1,6 +1,6 @@
 # Builds the shareable ZIP in dist\.
 #   powershell -ExecutionPolicy Bypass -File package.ps1
-param([string]$Version = '1.0.2')
+param([string]$Version = '1.0.3')
 
 $ErrorActionPreference = 'Stop'
 
@@ -50,7 +50,7 @@ foreach ($folder in @('wowvoice', 'addon')) {
 }
 
 # Personal settings and caches must never ship.
-foreach ($forbidden in @('config.json', '.venv', 'wow-voicechat.log', 'wow-voicechat.pid')) {
+foreach ($forbidden in @('config.json', '.venv', 'wow-voicechat.log', 'wow-voicechat.pid', 'wow-voicechat.stop')) {
     if (Test-Path (Join-Path $stage $forbidden)) {
         throw "Refusing to package personal data: $forbidden"
     }
