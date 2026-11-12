@@ -21,7 +21,7 @@ from .wowinput import send_chat
 
 ADDON_NAME = "WoWVoice"
 SAVEDVARS_FILE = f"{ADDON_NAME}.lua"
-ADDON_VERSION = "1.0.3"
+ADDON_VERSION = "1.0.4"
 
 # Addon key -> (config section, config key, converter)
 SETTING_MAP = {
@@ -353,6 +353,18 @@ class SettingsWatcher(threading.Thread):
 # --------------------------------------------------------------------------
 # Talking to the addon
 # --------------------------------------------------------------------------
+def trigger_label(cfg: dict) -> str:
+    """Short, human-readable name for the configured talk button."""
+    trigger = cfg.get("trigger") or {}
+    mode = str(trigger.get("mode", "auto")).lower()
+    hotkey = str(trigger.get("hotkey", "F9"))
+    if mode == "hotkey":
+        return hotkey
+    if mode == "controller":
+        return "Controller"
+    return f"Controller + {hotkey}"
+
+
 def build_status(*parts: str) -> str:
     """Join ``key=value`` parts; values must not contain separators."""
     clean: list[str] = []

@@ -3,7 +3,7 @@
 ## Notes: In-game panel and settings for the WoW Voice Chat push-to-talk tool.
 ## Notes-deDE: In-Game-Panel und Einstellungen fuer das WoW Voice Chat Push-to-Talk-Werkzeug.
 ## Author: WoWVoice contributors
-## Version: 1.0.3
+## Version: 1.0.4
 ## SavedVariables: WoWVoiceDB
 ## X-Category: Interface
 

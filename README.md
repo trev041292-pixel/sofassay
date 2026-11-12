@@ -5,6 +5,10 @@ a controller beats a keyboard. Press your chosen button (Xbox Share by default),
 wait for the beep, say what you want, then press it again. Your speech is
 transcribed locally and typed into the WoW chat box for you.
 
+> **You need a microphone or headset.** The controller has no microphone: the
+> button only starts and stops recording. Plug a headset (or a mic) into your
+> PC and talk into that, just like you would for Discord or voice chat.
+
 No cloud service, no account, no API key: speech recognition runs on your PC
 with [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
 
@@ -12,7 +16,7 @@ Built for the `_forever_` client, but it works with any WoW client that has the
 normal chat box. A bundled in-game addon adds a small status/settings panel.
 
 ```
-Button -> beep -> speak -> Button -> text appears in chat
+Button -> beep -> speak into your headset -> Button -> text appears in chat
 ```
 
 **New here?** [Install](#install) · [Using it](#using-it) · [In-game panel](#in-game-panel-addon) · [Troubleshooting](#troubleshooting)
@@ -27,7 +31,9 @@ Uses normal chat input and a standard addon. Read the
 - A controller that Windows sees as a gamepad/joystick, **or** any keyboard key.
   Xbox Share is the tested default; most PlayStation, Switch Pro, and 8BitDo
   controllers can be detected too.
-- A microphone
+- A **microphone or headset** plugged into your PC. The controller does not
+  record audio - it only tells the tool when to listen, so you still need
+  something to speak into.
 - World of Warcraft
 
 ## Install
@@ -108,7 +114,9 @@ The addon is included in the ZIP and installed by the setup window. In game:
 2. Type **`/wvc`** to open the panel. You can also bind
    *Toggle WoWVoice Panel* in **Key Bindings**.
 3. A circular button also sits by the minimap (bottom-left by default). Click
-   it to open the panel, drag it around the minimap to move it, or hide it with
+   it to open the panel, drag it around the minimap to move it, or right-click
+   it to snap it back to the default spot. The icon is tinted **green** while
+   the tool is running and **amber** when it is stopped. Hide it with
    **`/wvc minimap off`**.
 4. Pick the default channel and toggle sticky/Escape behaviour.
 5. Press **Save & Reload UI**. The addon saves on `/reload` or logout, and the
@@ -117,8 +125,9 @@ The addon is included in the ZIP and installed by the setup window. In game:
 The panel shows the last status the desktop tool sent it. It switches to
 **Tool running** when you press **Start** and **Tool stopped** when you press
 **Stop**, so it does not keep showing an old state. The *Updated ...* line
-counts up while the panel is open. If it ever looks out of date (for example,
-the tool was closed from Task Manager or started before WoW), press
+counts up while the panel is open. Hover the minimap button for the state, talk
+button, channel, and sticky setting. If the panel ever looks out of date (for
+example, the tool was closed from Task Manager or started before WoW), press
 **Send status to game** in the control panel to push it again.
 
 WoW addons cannot open sockets or read arbitrary files, so the two sides
@@ -134,6 +143,10 @@ Useful commands:
 | `/wvc` | Show or hide the panel |
 | `/wvc show` / `/wvc hide` | Panel visibility |
 | `/wvc minimap [on\|off\|reset]` | Show, hide, or move the minimap button |
+| `/wvc channel <name>` | Set the default channel (for example `/wvc channel party`) |
+| `/wvc sticky [on\|off]` | Remember the last channel |
+| `/wvc escape [on\|off]` | Press Escape after sending |
+| `/wvc test` | Check that the desktop tool can type into chat |
 | `/wvc reload` | Save and reload the UI |
 | `/wvc status <text>` | Set the status line (used by the tool) |
 
@@ -145,9 +158,15 @@ Useful commands:
 - **Send status to game** - pushes the current state to the in-game panel. The
   tool already does this automatically on Start and Stop; use the button if the
   panel looks out of date.
+- **Send test message** - types `/wvc test` into WoW so you can confirm the
+  desktop tool can type and the addon responds. It does not post a public chat
+  message.
 - **Open config** - edits `config.json`.
-- **Always on top** - keeps the window visible over the game.
+- **Always on top** - keeps the window visible over the game. This is remembered.
+- **Start when this window opens** - starts listening automatically (on by
+  default). Uncheck it if you prefer to press **Start** yourself.
 - **Log** - live output, also written to `wow-voicechat.log`.
+- **v1.0.4 · Check for updates** - opens the latest Releases page.
 
 Only one panel opens at a time. Closing it stops the tool. If the shortcut is
 missing, run `panel.bat`; `run.bat` starts the console version.
@@ -228,6 +247,10 @@ is the safe way to change it; these are the useful keys:
     "use_in_game_settings": true,   // addon settings override this file
     "sync_status": true,            // panel says running/stopped with the tool
     "announce_status": false        // also update the panel after every message
+  },
+  "panel": {
+    "auto_start": true,             // start listening when the panel opens
+    "always_on_top": false          // keep the panel above the game
   },
   "chat": {
     "default_channel": "say",
@@ -376,11 +399,11 @@ Local build:
 
 ```text
 powershell -ExecutionPolicy Bypass -File package.ps1
-gh release create v1.0.3 dist\WoWVoiceChat-1.0.3.zip --title "WoWVoiceChat 1.0.3"
+gh release create v1.0.4 dist\WoWVoiceChat-1.0.4.zip --title "WoWVoiceChat 1.0.4"
 ```
 
 The GitHub Actions workflows run the tests on every push and build/upload the
-ZIP automatically when you push a tag such as `v1.0.3`.
+ZIP automatically when you push a tag such as `v1.0.4`.
 
 ## License
 

@@ -5,7 +5,7 @@
 -- status lines the desktop tool types into chat as "/wvc status ...".
 
 local ADDON_NAME = "WoWVoice"
-local VERSION = "1.0.3"
+local VERSION = "1.0.4"
 
 BINDING_HEADER_WOWVOICE = "WoW Voice Chat"
 BINDING_NAME_TOGGLEWOWVOICEPANEL = "Toggle WoWVoice Panel"
@@ -46,7 +46,7 @@ local panel
 local statusText, statusDetail, statusLast, statusAge
 local channelButtons = {}
 local stickyCheck, closeCheck, minimapCheck, noteText
-local minimapButton
+local minimapButton, minimapIcon
 local refreshAll
 
 local function chatPrint(message)
@@ -72,6 +72,31 @@ local function labelFor(name)
 	return name
 end
 
+local function channelByName(value)
+	local wanted = string.lower(string.gsub(value or "", "%s+", ""))
+	if wanted == "" then
+		return nil
+	end
+	for _, channel in ipairs(CHANNELS) do
+		local label = string.lower(string.gsub(channel.label, "%s+", ""))
+		if channel.name == wanted or label == wanted then
+			return channel.name, channel.label
+		end
+	end
+	return nil
+end
+
+local function parseOnOff(value)
+	value = string.lower(value or "")
+	if value == "on" or value == "true" or value == "1" then
+		return true
+	end
+	if value == "off" or value == "false" or value == "0" then
+		return false
+	end
+	return nil
+end
+
 local function statusFields(text)
 	local fields = {}
 	if not text or text == "" then
@@ -84,6 +109,21 @@ local function statusFields(text)
 		end
 	end
 	return fields
+end
+
+-- Tint the minimap icon so the state is visible without opening anything.
+local function updateMinimapState()
+	if not minimapIcon then
+		return
+	end
+	local state = statusFields(WoWVoiceDB.status or "").state
+	if state == "running" then
+		minimapIcon:SetVertexColor(0.35, 1, 0.35)
+	elseif state == "stopped" then
+		minimapIcon:SetVertexColor(1, 0.75, 0.25)
+	else
+		minimapIcon:SetVertexColor(0.65, 0.65, 0.65)
+	end
 end
 
 local function ageText(seconds)
@@ -177,6 +217,7 @@ local function refreshStatus()
 	end
 
 	updateStatusAge()
+	updateMinimapState()
 end
 
 refreshAll = function()
@@ -268,6 +309,8 @@ local function buildMinimapButton()
 	icon:SetSize(20, 20)
 	icon:SetPoint("CENTER")
 	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	minimapIcon = icon
+	minimapButton.icon = icon
 
 	local border = minimapButton:CreateTexture(nil, "OVERLAY")
 	border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
@@ -276,6 +319,9 @@ local function buildMinimapButton()
 
 	minimapButton:SetScript("OnClick", function(_, button)
 		if button == "RightButton" then
+			WoWVoiceDB.minimapAngle = 220
+			updateMinimapPosition()
+			chatPrint("Minimap button moved back to its default position.")
 			return
 		end
 		WoWVoice_Toggle()
@@ -286,7 +332,20 @@ local function buildMinimapButton()
 		GameTooltip:AddLine("WoW Voice Chat")
 		GameTooltip:AddLine("Click to open settings", 1, 1, 1)
 		GameTooltip:AddLine("Drag to move around the minimap", 0.7, 0.7, 0.7)
+		GameTooltip:AddLine("Right-click to reset the position", 0.7, 0.7, 0.7)
+		local fields = statusFields(WoWVoiceDB.status or "")
+		if fields.state == "running" then
+			GameTooltip:AddLine("Tool: Running", 0.35, 1, 0.35)
+		elseif fields.state == "stopped" then
+			GameTooltip:AddLine("Tool: Stopped", 1, 0.75, 0.25)
+		else
+			GameTooltip:AddLine("Tool: waiting for a status", 0.7, 0.7, 0.7)
+		end
+		if fields.button then
+			GameTooltip:AddLine("Talk button: " .. fields.button, 1, 1, 1)
+		end
 		GameTooltip:AddLine("Channel: " .. labelFor(WoWVoiceDB.defaultChannel), 0.5, 1, 0.5)
+		GameTooltip:AddLine("Sticky channel: " .. (WoWVoiceDB.sticky and "On" or "Off"), 0.8, 0.8, 0.8)
 		GameTooltip:Show()
 	end)
 	minimapButton:SetScript("OnLeave", function()
@@ -316,6 +375,7 @@ local function buildMinimapButton()
 
 	updateMinimapPosition()
 	updateMinimapVisibility()
+	updateMinimapState()
 end
 
 local function buildPanel()
@@ -511,6 +571,7 @@ local function setStatus(text)
 	if panel and panel:IsShown() then
 		refreshStatus()
 	end
+	updateMinimapState()
 	if text and text ~= "" then
 		chatPrint("Status updated.")
 	end
@@ -521,6 +582,10 @@ local function printHelp()
 	chatPrint("  /wvc - show or hide the panel")
 	chatPrint("  /wvc show | hide | toggle - panel visibility")
 	chatPrint("  /wvc minimap [on|off|reset] - show, hide, or move the minimap button")
+	chatPrint("  /wvc channel <name> - choose the default channel")
+	chatPrint("  /wvc sticky [on|off] - remember the last channel")
+	chatPrint("  /wvc escape [on|off] - press Escape after sending")
+	chatPrint("  /wvc test - check that the desktop tool can type here")
 	chatPrint("  /wvc status <text> - used by the desktop tool")
 	chatPrint("  /wvc reload - save settings and reload the UI")
 end
@@ -564,6 +629,45 @@ SlashCmdList["WOWVOICE"] = function(msg)
 		end
 	elseif command == "status" then
 		setStatus(rest)
+	elseif command == "channel" then
+		local name, label = channelByName(rest)
+		if not name then
+			chatPrint("Unknown channel \"" .. rest .. "\". Try /wvc to see the list.")
+		else
+			buildPanel()
+			setChannel(name)
+			chatPrint("Channel set to " .. label .. ".")
+		end
+	elseif command == "sticky" then
+		local value = parseOnOff(rest)
+		if value == nil then
+			value = not WoWVoiceDB.sticky
+		end
+		WoWVoiceDB.sticky = value
+		if stickyCheck then
+			stickyCheck:SetChecked(value)
+		end
+		setNote("Sticky channel " .. (value and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
+		chatPrint("Sticky channel " .. (value and "on" or "off") .. ".")
+	elseif command == "escape" then
+		local value = parseOnOff(rest)
+		if value == nil then
+			value = not WoWVoiceDB.closeChatAfterSend
+		end
+		WoWVoiceDB.closeChatAfterSend = value
+		if closeCheck then
+			closeCheck:SetChecked(value)
+		end
+		setNote("Escape-after-send " .. (value and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
+		chatPrint("Escape after sending " .. (value and "on" or "off") .. ".")
+	elseif command == "test" then
+		local fields = statusFields(WoWVoiceDB.status or "")
+		chatPrint("Test message received. The desktop tool can type into chat.")
+		local extra = "State: " .. (fields.state or "unknown")
+		if fields.button then
+			extra = extra .. "   Button: " .. fields.button
+		end
+		chatPrint(extra)
 	elseif command == "reload" then
 		ReloadUI()
 	else

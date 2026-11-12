@@ -25,6 +25,8 @@ function _obj()
   function o:SetBackdropBorderColor() end
   function o:SetTexture() end
   function o:SetTexCoord() end
+  function o:SetVertexColor(r, g, b) self.vertex = {r, g, b} end
+  function o:SetAlpha(a) self.alpha = a end
   function o:SetParent(p) self.parent = p end
   function o:SetFrameLevel(level) self.level = level end
   function o:RegisterForClicks() end
@@ -66,6 +68,9 @@ function Minimap:GetEffectiveScale() return 1 end
 function Minimap:GetFrameLevel() return 1 end
 DEFAULT_CHAT_FRAME = _obj()
 GameTooltip = _obj()
+_G._tooltip = {}
+function GameTooltip:AddLine(text) _G._tooltip[#_G._tooltip + 1] = tostring(text) end
+function GameTooltip:SetText(text) _G._tooltip[#_G._tooltip + 1] = tostring(text) end
 math.atan2 = math.atan2 or function(y, x) return math.atan(y, x) end
 SlashCmdList = {}
 function CreateFrame(kind, name, parent, template)
@@ -118,9 +123,22 @@ def main() -> int:
     lua.eval('WoWVoiceMinimapButton.scripts.OnClick(WoWVoiceMinimapButton, "LeftButton")')
     check("minimap click closes panel", lua.eval("WoWVoicePanel:IsShown()") is False)
 
-    lua.eval('SlashCmdList["WOWVOICE"]("status state=running | channel=Party | mic=Test Mic | last=hello there")')
+    lua.eval('SlashCmdList["WOWVOICE"]("status state=running | channel=Party | button=Controller + F9 | mic=Test Mic | last=hello there")')
     check("status stored", lua.eval("WoWVoiceDB.status").startswith("state=running"))
     check("status time set", lua.eval("WoWVoiceDB.statusTime") > 0)
+
+    vertex = lua.eval("WoWVoiceMinimapButton.icon.vertex")
+    check(
+        "minimap tint running",
+        vertex is not None and vertex[2] == 1 and vertex[1] < 0.5,
+        vertex,
+    )
+    lua.eval("WoWVoiceMinimapButton.scripts.OnEnter(WoWVoiceMinimapButton)")
+    tooltip = [m for m in lua.eval("_G._tooltip").values()]
+    check("tooltip shows state", any("Tool: Running" in t for t in tooltip), tooltip)
+    check("tooltip shows button", any("Talk button: Controller + F9" in t for t in tooltip), tooltip)
+    check("tooltip shows sticky", any("Sticky channel: On" in t for t in tooltip), tooltip)
+    check("tooltip reset hint", any("Right-click to reset" in t for t in tooltip), tooltip)
 
     lua.eval('SlashCmdList["WOWVOICE"]("show")')
     check("show opens panel", lua.eval("WoWVoicePanel:IsShown()") is True)
@@ -142,6 +160,12 @@ def main() -> int:
     texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
     check("stopped headline", any("Tool stopped" in t for t in texts), texts)
     check("stopped age label", any(t == "Stopped just now" for t in texts), texts)
+    vertex = lua.eval("WoWVoiceMinimapButton.icon.vertex")
+    check(
+        "minimap tint stopped",
+        vertex is not None and vertex[1] == 1 and vertex[2] < 0.8,
+        vertex,
+    )
 
     lua.eval('SlashCmdList["WOWVOICE"]("hide")')
     check("hide closes panel", lua.eval("WoWVoicePanel:IsShown()") is False)
@@ -175,6 +199,36 @@ def main() -> int:
     lua.eval("WoWVoiceMinimapButton.scripts.OnUpdate()")
     lua.eval("WoWVoiceMinimapButton.scripts.OnDragStop(WoWVoiceMinimapButton)")
     check("drag updates angle", abs(lua.eval("WoWVoiceDB.minimapAngle") - 45) < 0.1)
+
+    lua.execute("WoWVoiceDB.minimapAngle = 10")
+    lua.eval('WoWVoiceMinimapButton.scripts.OnClick(WoWVoiceMinimapButton, "RightButton")')
+    check("right-click resets angle", lua.eval("WoWVoiceDB.minimapAngle") == 220)
+    check(
+        "right-click does not toggle panel",
+        lua.eval("WoWVoicePanel:IsShown()") is True,
+    )
+
+    lua.eval('SlashCmdList["WOWVOICE"]("sticky off")')
+    check("sticky command off", lua.eval("WoWVoiceDB.sticky") is False)
+    lua.eval('SlashCmdList["WOWVOICE"]("sticky on")')
+    check("sticky command on", lua.eval("WoWVoiceDB.sticky") is True)
+
+    lua.eval('SlashCmdList["WOWVOICE"]("escape off")')
+    check("escape command off", lua.eval("WoWVoiceDB.closeChatAfterSend") is False)
+    lua.eval('SlashCmdList["WOWVOICE"]("escape on")')
+    check("escape command on", lua.eval("WoWVoiceDB.closeChatAfterSend") is True)
+
+    lua.eval('SlashCmdList["WOWVOICE"]("channel party")')
+    check("channel command", lua.eval("WoWVoiceDB.defaultChannel") == "party")
+    lua.eval('SlashCmdList["WOWVOICE"]("channel notachannel")')
+    check("unknown channel ignored", lua.eval("WoWVoiceDB.defaultChannel") == "party")
+
+    lua.eval('SlashCmdList["WOWVOICE"]("status state=running | channel=Party | button=Controller + F9")')
+    lua.eval('SlashCmdList["WOWVOICE"]("test")')
+    messages = [m for m in lua.eval("_G._messages").values()]
+    check("test command answers", any("Test message received" in m for m in messages), messages)
+    check("test reports button", any("Button: Controller + F9" in m for m in messages), messages)
+    check("help mentions sticky", any("/wvc sticky" in m for m in messages), messages)
 
     print()
     print(f"{failures} failure(s)")

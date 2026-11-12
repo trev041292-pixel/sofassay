@@ -13,6 +13,7 @@ from .controller import TriggerManager
 from .recorder import Recorder
 from .routing import Router
 from .transcriber import Transcriber
+from .version import __version__
 
 LOG_PATH = APP_DIR / "wow-voicechat.log"
 PID_PATH = APP_DIR / "wow-voicechat.pid"
@@ -51,7 +52,7 @@ class VoiceChatApp:
         mic_name = self.recorder.description
         print()
         print("=" * 66)
-        print("  WoW Voice Chat")
+        print(f"  WoW Voice Chat {__version__}")
         print("=" * 66)
         print(f"  Trigger       : {trigger_names}")
         print(f"  Microphone    : {mic_name}")
@@ -183,6 +184,7 @@ class VoiceChatApp:
     def _status_parts(self, state: str = "running", last: str | None = None) -> list[str]:
         parts = [f"state={state}"]
         parts.append(f"channel={self.router.describe()}")
+        parts.append(f"button={addon_bridge.trigger_label(self.cfg)}")
         mic = self.recorder.description or ""
         if mic:
             parts.append(f"mic={mic[:44]}")

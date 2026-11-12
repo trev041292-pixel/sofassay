@@ -157,6 +157,12 @@ DEFAULTS = {
         # Send the in-game panel a status update after every message.
         "announce_status": False,
     },
+    "panel": {
+        # Start listening as soon as the control panel opens.
+        "auto_start": True,
+        # Keep the control panel above the game.
+        "always_on_top": False,
+    },
     "game": {
         # Auto-detected by the setup wizard; null = search common folders.
         "path": None,

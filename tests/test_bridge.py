@@ -95,6 +95,20 @@ class ApplyTests(unittest.TestCase):
         self.assertEqual(text, "state=running | channel=Party")
         self.assertLessEqual(len(addon_bridge.build_status("x" * 400)), 180)
 
+    def test_trigger_label_matches_mode(self) -> None:
+        self.assertEqual(
+            addon_bridge.trigger_label({"trigger": {"mode": "hotkey", "hotkey": "F8"}}),
+            "F8",
+        )
+        self.assertEqual(
+            addon_bridge.trigger_label({"trigger": {"mode": "controller"}}),
+            "Controller",
+        )
+        self.assertEqual(
+            addon_bridge.trigger_label({"trigger": {"mode": "auto", "hotkey": "F9"}}),
+            "Controller + F9",
+        )
+
 
 class WatcherTests(unittest.TestCase):
     def test_picks_up_file_created_later(self) -> None:

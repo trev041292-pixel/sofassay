@@ -1,8 +1,8 @@
 """WoW Voice Chat control panel.
 
 A small window that starts and stops the push-to-talk tool without keeping a
-console open. It shows the tool's own log live and remembers nothing: closing
-the window stops the tool.
+console open. It shows the tool's own log live and remembers a couple of panel
+preferences (auto-start and always-on-top); closing the window stops the tool.
 """
 from __future__ import annotations
 
@@ -15,8 +15,11 @@ import sys
 import threading
 import time
 import tkinter as tk
+import webbrowser
 from pathlib import Path
 from tkinter import messagebox, scrolledtext, ttk
+
+from wowvoice.version import RELEASES_URL, __version__
 
 APP_DIR = Path(__file__).resolve().parent
 MAIN = APP_DIR / "main.py"
@@ -99,12 +102,21 @@ class ControlPanel(tk.Tk):
         self.tick_job: str | None = None
         self.drain_job: str | None = None
 
+        self.cfg = self._load_cfg()
+        panel_cfg = self.cfg.get("panel") or {}
+        self.auto_start = bool(panel_cfg.get("auto_start", True))
+        self.always_on_top = bool(panel_cfg.get("always_on_top", False))
+
         self._build()
+        self.attributes("-topmost", self.always_on_top)
+        self._refresh_hint()
         self._load_log_tail()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.drain_job = self.after(100, self._drain)
         self.tick_job = self.after(300, self._tick)
         self.after(400, self._maybe_first_run)
+        if self.auto_start:
+            self.after(900, self._auto_start)
 
     # ------------------------------------------------------------------
     # Layout
@@ -140,7 +152,7 @@ class ControlPanel(tk.Tk):
         ttk.Button(buttons, text="Setup...", command=self.open_setup).pack(side="left", padx=(18, 6))
         ttk.Button(buttons, text="Open config", command=self.open_config).pack(side="left")
         ttk.Button(buttons, text="Clear log", command=self.clear_log).pack(side="left", padx=(6, 0))
-        self.topmost = tk.BooleanVar(value=False)
+        self.topmost = tk.BooleanVar(value=self.always_on_top)
         ttk.Checkbutton(
             buttons, text="Always on top", variable=self.topmost, command=self._toggle_topmost
         ).pack(side="right")
@@ -150,12 +162,16 @@ class ControlPanel(tk.Tk):
         ttk.Button(
             addon_row, text="Send status to game", command=self.push_status_to_game
         ).pack(side="left")
-        ttk.Label(
+        ttk.Button(
+            addon_row, text="Send test message", command=self.send_test_message
+        ).pack(side="left", padx=(6, 0))
+        self.auto_start_var = tk.BooleanVar(value=self.auto_start)
+        ttk.Checkbutton(
             addon_row,
-            text="The panel updates on Start/Stop. Use this if it looks out of date.",
-            font=("Segoe UI", 8),
-            foreground="#666666",
-        ).pack(side="left", padx=(8, 0))
+            text="Start when this window opens",
+            variable=self.auto_start_var,
+            command=self._toggle_auto_start,
+        ).pack(side="right")
 
         ttk.Label(outer, text="Log", font=("Segoe UI", 9)).pack(anchor="w")
         self.log_view = scrolledtext.ScrolledText(
@@ -171,12 +187,24 @@ class ControlPanel(tk.Tk):
         self.log_view.tag_configure("warn", foreground="#b32d2d")
         self.log_view.tag_configure("ok", foreground="#1f8a3b")
 
-        ttk.Label(
-            outer,
-            text="Press your talk button (Share, or F9) in game to talk. Closing this window stops the tool.",
+        footer = ttk.Frame(outer)
+        footer.pack(fill="x")
+        self.hint_label = ttk.Label(
+            footer,
+            text="",
             font=("Segoe UI", 8),
             foreground="#666666",
-        ).pack(anchor="w")
+        )
+        self.hint_label.pack(side="left")
+        self.version_label = ttk.Label(
+            footer,
+            text=f"v{__version__}  \u00b7  Check for updates",
+            font=("Segoe UI", 8),
+            foreground="#1a5fb4",
+            cursor="hand2",
+        )
+        self.version_label.pack(side="right")
+        self.version_label.bind("<Button-1>", lambda _event: self.open_releases())
 
         self.start_btn.state(["!disabled"])
         self.stop_btn.state(["disabled"])
@@ -191,7 +219,65 @@ class ControlPanel(tk.Tk):
     def _idle_detail(self) -> str:
         if self.recording:
             return "Recording \u2014 press your talk button again to send."
-        return "Running \u2014 press your talk button (Share, or F9) to talk."
+        return f"Running \u2014 press {self._talk_hint()} to talk."
+
+    def _talk_hint(self) -> str:
+        """Friendly name for the configured talk button."""
+        trigger = self.cfg.get("trigger") or {}
+        mode = str(trigger.get("mode", "auto")).lower()
+        hotkey = str(trigger.get("hotkey", "F9"))
+        if mode == "hotkey":
+            return hotkey
+        if mode == "controller":
+            return "your controller button"
+        return f"Share (or {hotkey})"
+
+    def _refresh_hint(self) -> None:
+        self.hint_label.configure(
+            text=(
+                f"Press {self._talk_hint()} in game to talk. "
+                "Start/Stop updates the in-game panel."
+            )
+        )
+
+    @staticmethod
+    def _load_cfg() -> dict:
+        try:
+            from wowvoice.config import load_config
+
+            return load_config()
+        except (SystemExit, OSError, ValueError):
+            return {}
+
+    def _save_panel_prefs(self, **updates) -> None:
+        try:
+            from wowvoice.config import load_config, save_config
+
+            cfg = load_config()
+            cfg.setdefault("panel", {}).update(updates)
+            save_config(cfg)
+            self.cfg = cfg
+        except (SystemExit, OSError, ValueError) as exc:
+            self._append(f"Could not save panel settings: {exc}")
+
+    def _toggle_auto_start(self) -> None:
+        self.auto_start = bool(self.auto_start_var.get())
+        self._save_panel_prefs(auto_start=self.auto_start)
+
+    def _auto_start(self) -> None:
+        if self.closing or self._running_pid():
+            return
+        game = self.cfg.get("game") or {}
+        if game.get("show_wizard_until_complete", True) and not game.get("setup_completed"):
+            return
+        self._append("\u2014 auto-start is on; starting \u2014")
+        self.start_app()
+
+    def open_releases(self) -> None:
+        try:
+            webbrowser.open(RELEASES_URL)
+        except OSError as exc:
+            self._append(f"Could not open the releases page: {exc}")
 
     @staticmethod
     def _python_exe() -> Path:
@@ -457,9 +543,11 @@ class ControlPanel(tk.Tk):
         SetupWizard(self, on_saved=self._after_setup_saved)
 
     def _after_setup_saved(self, cfg: dict) -> None:
+        self.cfg = cfg
         game = (cfg.get("game") or {}).get("path")
         if game:
             self._append(f"Setup saved. Game folder: {game}")
+        self._refresh_hint()
         if self._running_pid():
             if messagebox.askyesno(
                 WINDOW_TITLE,
@@ -491,6 +579,7 @@ class ControlPanel(tk.Tk):
             text = addon_bridge.build_status(
                 f"state={state}",
                 f"channel={labels.get(name, name.title())}",
+                f"button={addon_bridge.trigger_label(cfg)}",
                 f"mic={mic}",
             )
             ok = addon_bridge.push_status(cfg, text, log=lambda *_: None)
@@ -501,6 +590,37 @@ class ControlPanel(tk.Tk):
             "Status sent to the in-game panel."
             if ok
             else "Status was not sent - is World of Warcraft running?"
+        )
+
+    def send_test_message(self) -> None:
+        self._append("Sending a test message to the game...")
+        threading.Thread(target=self._test_message_worker, daemon=True).start()
+
+    def _test_message_worker(self) -> None:
+        """Type ``/wvc test`` into WoW, which the addon answers privately."""
+        try:
+            from wowvoice import wowinput
+            from wowvoice.config import load_config
+
+            cfg = load_config()
+            chat = cfg.get("chat") or {}
+            hwnd = wowinput.find_wow_window(
+                chat.get("window_process", "Wow.exe"),
+                chat.get("window_title", "World of Warcraft"),
+            )
+            if not hwnd:
+                self.events.put("Test message not sent - World of Warcraft is not running.")
+                return
+            ok = wowinput.send_chat(
+                "/wvc test", cfg, log=lambda *_: None, close_chat=False
+            )
+        except Exception as exc:  # noqa: BLE001 - reported in the log view
+            self.events.put(f"Test message failed: {exc}")
+            return
+        self.events.put(
+            "Test message sent. The in-game panel should confirm it in chat."
+            if ok
+            else "Test message could not be sent."
         )
 
     # ------------------------------------------------------------------
@@ -517,7 +637,9 @@ class ControlPanel(tk.Tk):
             messagebox.showerror(WINDOW_TITLE, f"Could not open config.json:\n{exc}")
 
     def _toggle_topmost(self) -> None:
-        self.attributes("-topmost", self.topmost.get())
+        self.always_on_top = bool(self.topmost.get())
+        self.attributes("-topmost", self.always_on_top)
+        self._save_panel_prefs(always_on_top=self.always_on_top)
 
     def _on_close(self) -> None:
         pid = self._running_pid()

@@ -21,6 +21,12 @@ class StatusSyncTests(unittest.TestCase):
         self.assertEqual(STOP_PATH.name, "wow-voicechat.stop")
         self.assertEqual(STOP_PATH.parent, Path(__file__).resolve().parent.parent)
 
+    def test_panel_auto_start_is_on_by_default(self) -> None:
+        self.assertIs(DEFAULTS["panel"]["auto_start"], True)
+
+    def test_panel_always_on_top_stays_off_by_default(self) -> None:
+        self.assertIs(DEFAULTS["panel"]["always_on_top"], False)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
