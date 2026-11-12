@@ -134,8 +134,8 @@ The addon is included in the ZIP and installed by the setup window. In game:
 The panel shows the last status the desktop tool sent it. Use **Send status to
 game** in the control panel to push the current state manually.
 
-In 1.12 addons cannot open sockets or read files, so the two sides communicate
-indirectly:
+WoW addons cannot open sockets or read arbitrary files, so the two sides
+communicate indirectly:
 
 - **addon -> tool:** SavedVariables, written on `/reload` or logout.
 - **tool -> addon:** a `/wvc status ...` line typed into chat.
@@ -184,8 +184,8 @@ Say / Party / Yell / Guild / Officer / Raid / Raid Warning / Instance /
 General (`/1`) / Trade (`/2`) / Local Defense (`/3`) / Looking for Group (`/4`) /
 World Defense (`/5`) / Whisper / Reply / Emote.
 
-Private-server channel numbers can differ. Edit the `command` values in
-`config.json` if `/5` is not World Defense on your server.
+Channel numbers can differ between clients. Edit the `command` values in
+`config.json` if `/5` is not World Defense on your client.
 
 > **Testing tip:** use Say, party chat, or whispers while you try it out. Avoid
 > accidentally broadcasting to a large channel.
