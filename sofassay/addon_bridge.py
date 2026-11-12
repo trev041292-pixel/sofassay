@@ -21,7 +21,7 @@ from .wowinput import send_chat
 
 ADDON_NAME = "SofaSay"
 SAVEDVARS_FILE = f"{ADDON_NAME}.lua"
-ADDON_VERSION = "2.0.0"
+ADDON_VERSION = "2.1.0"
 
 # Addon key -> (config section, config key, converter)
 SETTING_MAP = {

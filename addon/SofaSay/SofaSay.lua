@@ -5,10 +5,12 @@
 -- status lines the desktop tool types into chat as "/sofa status ...".
 
 local ADDON_NAME = "SofaSay"
-local VERSION = "2.0.0"
+local VERSION = "2.1.0"
 
 BINDING_HEADER_SOFASAY = "SofaSay"
 BINDING_NAME_TOGGLESOFASAYPANEL = "Toggle SofaSay Panel"
+BINDING_NAME_SOFASAYNEXTCHANNEL = "SofaSay: next channel"
+BINDING_NAME_SOFASAYPREVCHANNEL = "SofaSay: previous channel"
 
 -- The sofa is bundled with the addon (a grayscale TGA, tinted by the state).
 -- The spyglass is the built-in fallback if the custom file will not load.
@@ -180,6 +182,31 @@ local function setNote(text)
 	end
 end
 
+-- ConsolePort (if installed) gives the panel a virtual pointer, so a controller
+-- can click the buttons. The addon still works without it.
+local function consolePortAvailable()
+	local cp = _G.ConsolePort
+	return cp and cp.AddInterfaceCursorFrame and true or false
+end
+
+local function registerWithConsolePort()
+	if not panel then
+		return
+	end
+	local cp = _G.ConsolePort
+	if not (cp and cp.AddInterfaceCursorFrame) then
+		return
+	end
+	pcall(cp.AddInterfaceCursorFrame, cp, panel)
+end
+
+local function defaultNote()
+	if consolePortAvailable() then
+		return "Controller: move the pointer with the stick and press A to click. B or Escape closes this panel. Changes save with Save & Reload UI."
+	end
+	return "Changes are written when you click Save & Reload UI (or log out). The desktop tool applies them within a few seconds."
+end
+
 local function refreshChannels()
 	for index, channel in ipairs(CHANNELS) do
 		local button = channelButtons[index]
@@ -259,6 +286,28 @@ local function setChannel(name)
 	SofaSayDB.defaultChannel = name
 	refreshChannels()
 	setNote("Selected " .. labelFor(name) .. ". Click Save & Reload UI so the desktop tool applies it.")
+end
+
+-- Used by the next/previous channel key bindings (bindable to controller
+-- buttons in ConsolePort) so a controller player can switch channels without
+-- opening the panel.
+function SofaSay_CycleChannel(step)
+	initDB()
+	step = tonumber(step) or 1
+	local count = #CHANNELS
+	local index = 1
+	for i, channel in ipairs(CHANNELS) do
+		if channel.name == SofaSayDB.defaultChannel then
+			index = i
+			break
+		end
+	end
+	index = ((index - 1 + step) % count) + 1
+	local channel = CHANNELS[index]
+	SofaSayDB.defaultChannel = channel.name
+	refreshChannels()
+	setNote("Selected " .. channel.label .. ". Click Save & Reload UI so the desktop tool applies it.")
+	chatPrint("Channel: " .. channel.label .. ". Saved on /reload or logout.")
 end
 
 local function makeButton(parent, text, width, height, onClick)
@@ -348,7 +397,7 @@ local function buildMinimapButton()
 	minimapButton:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		GameTooltip:AddLine("SofaSay")
-		GameTooltip:AddLine("Click to open settings", 1, 1, 1)
+		GameTooltip:AddLine("Click to open settings (the controller pointer works too)", 1, 1, 1)
 		GameTooltip:AddLine("Drag to move around the minimap", 0.7, 0.7, 0.7)
 		GameTooltip:AddLine("Right-click to reset the position", 0.7, 0.7, 0.7)
 		local fields = statusFields(SofaSayDB.status or "")
@@ -402,13 +451,17 @@ local function buildPanel()
 	end
 
 	panel = CreateFrame("Frame", "SofaSayPanel", UIParent, "BackdropTemplate")
-	panel:SetSize(400, 470)
+	panel:SetSize(400, 500)
 	panel:SetPoint("CENTER", UIParent, "CENTER", SofaSayDB.x or 0, SofaSayDB.y or 0)
 	panel:SetFrameStrata("DIALOG")
 	panel:SetToplevel(true)
 	panel:SetClampedToScreen(true)
 	panel:SetMovable(true)
 	panel:EnableMouse(true)
+	-- Escape closes the panel. ConsolePort maps B to Escape, so B works too.
+	if UISpecialFrames then
+		tinsert(UISpecialFrames, "SofaSayPanel")
+	end
 	panel:RegisterForDrag("LeftButton")
 	panel:SetScript("OnDragStart", panel.StartMoving)
 	panel:SetScript("OnDragStop", function(self)
@@ -475,9 +528,9 @@ local function buildPanel()
 
 	local grid = CreateFrame("Frame", nil, panel)
 	grid:SetPoint("TOPLEFT", 16, -170)
-	grid:SetSize(368, 106)
+	grid:SetSize(368, 136)
 
-	local columns, buttonWidth, buttonHeight, gap = 4, 86, 22, 6
+	local columns, buttonWidth, buttonHeight, gap = 4, 86, 28, 8
 	for index, channel in ipairs(CHANNELS) do
 		local column = (index - 1) % columns
 		local row = math.floor((index - 1) / columns)
@@ -498,14 +551,14 @@ local function buildPanel()
 	end
 
 	noteText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	noteText:SetPoint("TOPLEFT", 18, -284)
+	noteText:SetPoint("TOPLEFT", 18, -314)
 	noteText:SetWidth(364)
 	noteText:SetJustifyH("LEFT")
 	noteText:SetTextColor(0.85, 0.85, 0.85)
-	noteText:SetText("Changes are written when you click Save & Reload UI (or log out). The desktop tool applies them within a few seconds.")
+	noteText:SetText(defaultNote())
 
 	stickyCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
-	stickyCheck:SetPoint("TOPLEFT", 16, -334)
+	stickyCheck:SetPoint("TOPLEFT", 16, -364)
 	stickyCheck:SetScript("OnClick", function(self)
 		SofaSayDB.sticky = self:GetChecked() and true or false
 		setNote("Sticky channel " .. (SofaSayDB.sticky and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
@@ -515,7 +568,7 @@ local function buildPanel()
 	stickyLabel:SetText("Remember the last channel")
 
 	closeCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
-	closeCheck:SetPoint("TOPLEFT", 16, -364)
+	closeCheck:SetPoint("TOPLEFT", 16, -394)
 	closeCheck:SetScript("OnClick", function(self)
 		SofaSayDB.closeChatAfterSend = self:GetChecked() and true or false
 		setNote("Escape-after-send " .. (SofaSayDB.closeChatAfterSend and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
@@ -525,7 +578,7 @@ local function buildPanel()
 	closeLabel:SetText("Press Escape after sending")
 
 	minimapCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
-	minimapCheck:SetPoint("TOPLEFT", 16, -394)
+	minimapCheck:SetPoint("TOPLEFT", 16, -424)
 	minimapCheck:SetScript("OnClick", function(self)
 		SofaSayDB.showMinimap = self:GetChecked() and true or false
 		updateMinimapVisibility()
@@ -551,6 +604,7 @@ local function buildPanel()
 
 	panel:SetScript("OnShow", function()
 		refreshAll()
+		setNote(defaultNote())
 	end)
 
 	-- Keep "Updated 5m ago" honest while the panel is open. The tool sends a
@@ -567,6 +621,7 @@ local function buildPanel()
 
 	refreshAll()
 	panel:Hide()
+	registerWithConsolePort()
 end
 
 local function showPanel()
@@ -602,6 +657,7 @@ local function printHelp()
 	chatPrint("  /sofa minimap [on|off|reset] - show, hide, or move the minimap button")
 	chatPrint("  /sofa icon [sofa|classic] - minimap button art")
 	chatPrint("  /sofa channel <name> - choose the default channel")
+	chatPrint("  /sofa next | prev - switch to the next or previous channel")
 	chatPrint("  /sofa sticky [on|off] - remember the last channel")
 	chatPrint("  /sofa escape [on|off] - press Escape after sending")
 	chatPrint("  /sofa test - check that the desktop tool can type here")
@@ -669,6 +725,10 @@ SlashCmdList["SOFASAY"] = function(msg)
 			setChannel(name)
 			chatPrint("Channel set to " .. label .. ".")
 		end
+	elseif command == "next" then
+		SofaSay_CycleChannel(1)
+	elseif command == "prev" or command == "previous" then
+		SofaSay_CycleChannel(-1)
 	elseif command == "sticky" then
 		local value = parseOnOff(rest)
 		if value == nil then
@@ -708,14 +768,18 @@ end
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
-events:SetScript("OnEvent", function(_, _, name)
-	if name ~= ADDON_NAME then
-		return
-	end
-	initDB()
-	buildPanel()
-	buildMinimapButton()
-	if SofaSayDB.status ~= "" then
-		chatPrint("Loaded. Type /sofa to open the panel.")
+events:RegisterEvent("PLAYER_LOGIN")
+events:SetScript("OnEvent", function(_, event, name)
+	if event == "ADDON_LOADED" and name == ADDON_NAME then
+		initDB()
+		buildPanel()
+		buildMinimapButton()
+		registerWithConsolePort()
+		if SofaSayDB.status ~= "" then
+			chatPrint("Loaded. Type /sofa to open the panel.")
+		end
+	elseif event == "PLAYER_LOGIN" or (event == "ADDON_LOADED" and name == "ConsolePort") then
+		-- Covers a load order where ConsolePort finishes after SofaSay.
+		registerWithConsolePort()
 	end
 end)

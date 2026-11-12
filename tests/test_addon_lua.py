@@ -82,6 +82,15 @@ function CreateFrame(kind, name, parent, template)
 end
 function ReloadUI() _G._reloaded = true end
 function GetCursorPosition() return 200, 200 end
+tinsert = table.insert
+UISpecialFrames = {}
+ConsolePort = {
+  frames = {},
+  AddInterfaceCursorFrame = function(self, frame)
+    self.frame = frame
+    self.frames[#self.frames + 1] = frame
+  end,
+}
 time = os.time
 """
 
@@ -108,6 +117,14 @@ def main() -> int:
     db = lua.eval("SofaSayDB")
     check("defaults created", db["defaultChannel"] == "say" and db["sticky"] is True)
     check("panel hidden at load", lua.eval("SofaSayPanel:IsShown()") is False)
+    check("escape closes panel", lua.eval("UISpecialFrames[1]") == "SofaSayPanel")
+    check(
+        "consoleport pointer registered",
+        lua.eval("ConsolePort.frame == SofaSayPanel") is True,
+    )
+    fonts = lua.eval("_G._fonts")
+    texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
+    check("controller hint in note", any("Controller:" in t for t in texts), texts)
 
     check("minimap button created", lua.eval("SofaSayMinimapButton ~= nil") is True)
     check("minimap button shown", lua.eval("SofaSayMinimapButton:IsShown()") is True)
@@ -201,6 +218,7 @@ def main() -> int:
     check("help printed", any("commands:" in m for m in lua.eval("_G._messages").values()))
     check("help mentions minimap", any("/sofa minimap" in m for m in lua.eval("_G._messages").values()))
     check("help mentions icon", any("/sofa icon" in m for m in lua.eval("_G._messages").values()))
+    check("help mentions channel switching", any("/sofa next" in m for m in lua.eval("_G._messages").values()))
 
     lua.eval('SlashCmdList["SOFASAY"]("minimap off")')
     check("minimap off hides button", lua.eval("SofaSayDB.showMinimap") is False)
@@ -247,6 +265,15 @@ def main() -> int:
     check("channel command", lua.eval("SofaSayDB.defaultChannel") == "party")
     lua.eval('SlashCmdList["SOFASAY"]("channel notachannel")')
     check("unknown channel ignored", lua.eval("SofaSayDB.defaultChannel") == "party")
+
+    lua.eval("SofaSay_CycleChannel(1)")
+    check("next channel binding", lua.eval("SofaSayDB.defaultChannel") == "yell")
+    lua.eval("SofaSay_CycleChannel(-1)")
+    check("previous channel binding", lua.eval("SofaSayDB.defaultChannel") == "party")
+    lua.eval('SlashCmdList["SOFASAY"]("next")')
+    check("next channel command", lua.eval("SofaSayDB.defaultChannel") == "yell")
+    lua.eval('SlashCmdList["SOFASAY"]("prev")')
+    check("prev channel command", lua.eval("SofaSayDB.defaultChannel") == "party")
 
     lua.eval('SlashCmdList["SOFASAY"]("status state=running | channel=Party | button=Controller + F9")')
     lua.eval('SlashCmdList["SOFASAY"]("test")')

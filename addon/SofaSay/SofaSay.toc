@@ -3,7 +3,7 @@
 ## Notes: In-game panel and settings for the SofaSay push-to-talk tool.
 ## Notes-deDE: In-Game-Panel und Einstellungen fuer das SofaSay Push-to-Talk-Werkzeug.
 ## Author: SofaSay contributors
-## Version: 2.0.0
+## Version: 2.1.0
 ## SavedVariables: SofaSayDB
 ## X-Category: Interface
 
