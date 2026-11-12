@@ -5,9 +5,9 @@ a controller beats a keyboard. Press your chosen button (Xbox Share by default),
 wait for the beep, say what you want, then press it again. Your speech is
 transcribed locally and typed into the WoW chat box for you.
 
-> **You need a microphone or headset.** The controller has no microphone: the
-> button only starts and stops recording. Plug a headset (or a mic) into your
-> PC and talk into that, just like you would for Discord or voice chat.
+> **Connect a headset or microphone to your PC.** The controller button only
+> starts and stops recording; your voice is captured by the headset or mic you
+> already use for calls, Discord, or voice chat.
 
 No cloud service, no account, no API key: speech recognition runs on your PC
 with [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
@@ -31,9 +31,8 @@ Uses normal chat input and a standard addon. Read the
 - A controller that Windows sees as a gamepad/joystick, **or** any keyboard key.
   Xbox Share is the tested default; most PlayStation, Switch Pro, and 8BitDo
   controllers can be detected too.
-- A **microphone or headset** plugged into your PC. The controller does not
-  record audio - it only tells the tool when to listen, so you still need
-  something to speak into.
+- A **headset or microphone** connected to your PC. The controller button starts
+  and stops recording; the audio comes from your headset or mic.
 - World of Warcraft
 
 ## Install
