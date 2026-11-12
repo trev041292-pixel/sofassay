@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="TOGGLESOFASAYPANEL" header="SOFASAY">
+		SofaSay_Toggle()
+	</Binding>
+</Bindings>

@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title WoW Voice Chat
+title SofaSay
 
 if not exist ".venv\Scripts\python.exe" (
     call setup.bat
@@ -10,5 +10,5 @@ if not exist ".venv\Scripts\python.exe" (
 
 ".venv\Scripts\python.exe" main.py %*
 echo.
-echo WoW Voice Chat has stopped.
+echo SofaSay has stopped.
 pause

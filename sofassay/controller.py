@@ -126,7 +126,7 @@ class RawInputTrigger:
         self.reports: queue.Queue[tuple[int, bytes]] = queue.Queue()
         self.hwnd = None
         self._wndproc = None
-        self._class_name = f"WowVoiceRawInput{id(self):x}"
+        self._class_name = f"SofaSayRawInput{id(self):x}"
         self._pressed: dict[int, bool] = {}
         self._names: dict[int, str] = {}
         self._debug_last: dict[int, bytes] = {}
@@ -144,7 +144,7 @@ class RawInputTrigger:
             return False
 
         self.hwnd = user32.CreateWindowExW(
-            0, self._class_name, "WoW Voice Chat", 0,
+            0, self._class_name, "SofaSay", 0,
             0, 0, 0, 0, None, None, hinst, None,
         )
         if not self.hwnd:

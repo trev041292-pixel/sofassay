@@ -2,7 +2,7 @@
 
 Outputs:
 
-* ``addon/WoWVoice/sofa.tga``  - 64x64 grayscale sofa for the minimap button.
+* ``addon/SofaSay/sofa.tga``  - 64x64 grayscale sofa for the minimap button.
   It is drawn in light greys on purpose: the addon tints it green/amber with
   ``SetVertexColor`` to show whether the desktop tool is running.
 * ``assets/sofa.ico``          - Windows shortcut / window icon (warm colours).
@@ -24,29 +24,29 @@ BODY = (8, 26, 56, 46, 6)
 BACK = (14, 13, 50, 31, 6)
 ARM_LEFT = (4, 21, 15, 46, 6)
 ARM_RIGHT = (49, 21, 60, 46, 6)
-SEAT_LEFT = (15, 30, 32, 42, 4)
-SEAT_RIGHT = (32, 30, 49, 42, 4)
+SEAT_LEFT = (15, 30, 31.2, 42, 4)
+SEAT_RIGHT = (32.8, 30, 49, 42, 4)
 LEG_LEFT = (10, 44, 16, 53, 2)
 LEG_RIGHT = (48, 44, 54, 53, 2)
 
 SILHOUETTE = (BODY, BACK, ARM_LEFT, ARM_RIGHT, SEAT_LEFT, SEAT_RIGHT, LEG_LEFT, LEG_RIGHT)
 
 WARM = {
-    "outline": (61, 42, 26),
-    "body": (176, 123, 79),
-    "back": (201, 149, 102),
-    "seat": (227, 181, 131),
-    "arm": (160, 107, 66),
+    "outline": (58, 42, 27),
+    "body": (143, 91, 51),
+    "back": (217, 160, 106),
+    "seat": (242, 195, 142),
+    "arm": (176, 116, 60),
     "leg": (90, 62, 40),
 }
 
 GREY = {
-    "outline": (56, 56, 56),
-    "body": (184, 184, 184),
-    "back": (214, 214, 214),
-    "seat": (242, 242, 242),
-    "arm": (168, 168, 168),
-    "leg": (82, 82, 82),
+    "outline": (45, 45, 45),
+    "body": (120, 120, 120),
+    "back": (200, 200, 200),
+    "seat": (245, 245, 245),
+    "arm": (150, 150, 150),
+    "leg": (70, 70, 70),
 }
 
 OUTLINE_WIDTH = 1.4
@@ -192,7 +192,7 @@ def main() -> int:
     assets.mkdir(exist_ok=True)
 
     grey = render(64, GREY, supersample=6)
-    (ROOT / "addon" / "WoWVoice" / "sofa.tga").write_bytes(tga_bytes(grey, 64))
+    (ROOT / "addon" / "SofaSay" / "sofa.tga").write_bytes(tga_bytes(grey, 64))
 
     sizes = [16, 32, 48, 64, 128, 256]
     warm = {size: render(size, WARM, supersample=3 if size <= 128 else 2) for size in sizes}
@@ -202,7 +202,7 @@ def main() -> int:
     (assets / "sofa.png").write_bytes(png_bytes(warm[256], 256))
 
     for path in (
-        ROOT / "addon" / "WoWVoice" / "sofa.tga",
+        ROOT / "addon" / "SofaSay" / "sofa.tga",
         assets / "sofa.ico",
         assets / "sofa.png",
     ):

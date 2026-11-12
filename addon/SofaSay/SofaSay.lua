@@ -1,14 +1,21 @@
--- WoWVoice: in-game panel for the WoW Voice Chat desktop tool.
+-- SofaSay: in-game panel for the SofaSay desktop tool.
 --
 -- The addon cannot read the tool's config or talk to it directly. It writes
 -- its settings to SavedVariables (saved on /reload or logout) and displays
--- status lines the desktop tool types into chat as "/wvc status ...".
+-- status lines the desktop tool types into chat as "/sofa status ...".
 
-local ADDON_NAME = "WoWVoice"
-local VERSION = "1.0.4"
+local ADDON_NAME = "SofaSay"
+local VERSION = "2.0.0"
 
-BINDING_HEADER_WOWVOICE = "WoW Voice Chat"
-BINDING_NAME_TOGGLEWOWVOICEPANEL = "Toggle WoWVoice Panel"
+BINDING_HEADER_SOFASAY = "SofaSay"
+BINDING_NAME_TOGGLESOFASAYPANEL = "Toggle SofaSay Panel"
+
+-- The sofa is bundled with the addon (a grayscale TGA, tinted by the state).
+-- The spyglass is the built-in fallback if the custom file will not load.
+local ICONS = {
+	sofa = "Interface\\AddOns\\" .. ADDON_NAME .. "\\sofa",
+	classic = "Interface\\Icons\\INV_Misc_Spyglass_02",
+}
 
 local CHANNELS = {
 	{ name = "say", label = "Say" },
@@ -40,6 +47,7 @@ local DEFAULTS = {
 	y = 0,
 	showMinimap = true,
 	minimapAngle = 220,
+	icon = "sofa",
 }
 
 local panel
@@ -50,17 +58,17 @@ local minimapButton, minimapIcon
 local refreshAll
 
 local function chatPrint(message)
-	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99WoWVoice|r " .. tostring(message))
+	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99SofaSay|r " .. tostring(message))
 end
 
 local function initDB()
-	WoWVoiceDB = WoWVoiceDB or {}
+	SofaSayDB = SofaSayDB or {}
 	for key, value in pairs(DEFAULTS) do
-		if WoWVoiceDB[key] == nil then
-			WoWVoiceDB[key] = value
+		if SofaSayDB[key] == nil then
+			SofaSayDB[key] = value
 		end
 	end
-	WoWVoiceDB.version = DEFAULTS.version
+	SofaSayDB.version = DEFAULTS.version
 end
 
 local function labelFor(name)
@@ -111,12 +119,21 @@ local function statusFields(text)
 	return fields
 end
 
+-- Swap between the bundled sofa and the built-in spyglass.
+local function applyMinimapIcon()
+	if not minimapIcon then
+		return
+	end
+	local texture = ICONS[string.lower(SofaSayDB.icon or "sofa")] or ICONS.sofa
+	minimapIcon:SetTexture(texture)
+end
+
 -- Tint the minimap icon so the state is visible without opening anything.
 local function updateMinimapState()
 	if not minimapIcon then
 		return
 	end
-	local state = statusFields(WoWVoiceDB.status or "").state
+	local state = statusFields(SofaSayDB.status or "").state
 	if state == "running" then
 		minimapIcon:SetVertexColor(0.35, 1, 0.35)
 	elseif state == "stopped" then
@@ -141,15 +158,15 @@ local function updateStatusAge()
 	if not statusAge then
 		return
 	end
-	if not (WoWVoiceDB.statusTime and WoWVoiceDB.statusTime > 0) then
+	if not (SofaSayDB.statusTime and SofaSayDB.statusTime > 0) then
 		statusAge:SetText("No status yet")
 		return
 	end
-	local age = time() - WoWVoiceDB.statusTime
+	local age = time() - SofaSayDB.statusTime
 	if age < 0 then
 		age = 0
 	end
-	local state = statusFields(WoWVoiceDB.status or "").state
+	local state = statusFields(SofaSayDB.status or "").state
 	if state == "stopped" then
 		statusAge:SetText("Stopped " .. ageText(age))
 	else
@@ -167,7 +184,7 @@ local function refreshChannels()
 	for index, channel in ipairs(CHANNELS) do
 		local button = channelButtons[index]
 		if button then
-			if channel.name == WoWVoiceDB.defaultChannel then
+			if channel.name == SofaSayDB.defaultChannel then
 				button:SetText("|cff40ff40" .. channel.label .. "|r")
 			else
 				button:SetText(channel.label)
@@ -181,7 +198,7 @@ local function refreshStatus()
 		return
 	end
 
-	local raw = WoWVoiceDB.status or ""
+	local raw = SofaSayDB.status or ""
 	local fields = statusFields(raw)
 	local headline, color
 
@@ -224,22 +241,22 @@ refreshAll = function()
 	refreshChannels()
 	refreshStatus()
 	if stickyCheck then
-		stickyCheck:SetChecked(WoWVoiceDB.sticky and true or false)
+		stickyCheck:SetChecked(SofaSayDB.sticky and true or false)
 	end
 	if closeCheck then
-		closeCheck:SetChecked(WoWVoiceDB.closeChatAfterSend and true or false)
+		closeCheck:SetChecked(SofaSayDB.closeChatAfterSend and true or false)
 	end
 	if minimapCheck then
-		minimapCheck:SetChecked(WoWVoiceDB.showMinimap and true or false)
+		minimapCheck:SetChecked(SofaSayDB.showMinimap and true or false)
 	end
 end
 
 local function setChannel(name)
-	if WoWVoiceDB.defaultChannel == name then
+	if SofaSayDB.defaultChannel == name then
 		setNote("Already selected. Click Save & Reload UI to make sure the tool has it.")
 		return
 	end
-	WoWVoiceDB.defaultChannel = name
+	SofaSayDB.defaultChannel = name
 	refreshChannels()
 	setNote("Selected " .. labelFor(name) .. ". Click Save & Reload UI so the desktop tool applies it.")
 end
@@ -259,7 +276,7 @@ local function updateMinimapPosition()
 	if not minimapButton or not Minimap then
 		return
 	end
-	local angle = math.rad(WoWVoiceDB.minimapAngle or 220)
+	local angle = math.rad(SofaSayDB.minimapAngle or 220)
 	local width = Minimap:GetWidth() or 140
 	local radius = width / 2 + 10
 	minimapButton:ClearAllPoints()
@@ -276,7 +293,7 @@ local function updateMinimapVisibility()
 	if not minimapButton then
 		return
 	end
-	if WoWVoiceDB.showMinimap == false then
+	if SofaSayDB.showMinimap == false then
 		minimapButton:Hide()
 	else
 		minimapButton:Show()
@@ -292,7 +309,7 @@ local function buildMinimapButton()
 		return
 	end
 
-	minimapButton = CreateFrame("Button", "WoWVoiceMinimapButton", Minimap)
+	minimapButton = CreateFrame("Button", "SofaSayMinimapButton", Minimap)
 	minimapButton:SetSize(32, 32)
 	minimapButton:SetFrameStrata("MEDIUM")
 	minimapButton:SetFrameLevel((Minimap:GetFrameLevel() or 1) + 8)
@@ -305,12 +322,13 @@ local function buildMinimapButton()
 	background:SetPoint("CENTER")
 
 	local icon = minimapButton:CreateTexture(nil, "ARTWORK")
-	icon:SetTexture("Interface\\Icons\\INV_Misc_Spyglass_02")
+	icon:SetTexture(ICONS.sofa)
 	icon:SetSize(20, 20)
 	icon:SetPoint("CENTER")
 	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	minimapIcon = icon
 	minimapButton.icon = icon
+	applyMinimapIcon()
 
 	local border = minimapButton:CreateTexture(nil, "OVERLAY")
 	border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
@@ -319,21 +337,21 @@ local function buildMinimapButton()
 
 	minimapButton:SetScript("OnClick", function(_, button)
 		if button == "RightButton" then
-			WoWVoiceDB.minimapAngle = 220
+			SofaSayDB.minimapAngle = 220
 			updateMinimapPosition()
 			chatPrint("Minimap button moved back to its default position.")
 			return
 		end
-		WoWVoice_Toggle()
+		SofaSay_Toggle()
 	end)
 
 	minimapButton:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:AddLine("WoW Voice Chat")
+		GameTooltip:AddLine("SofaSay")
 		GameTooltip:AddLine("Click to open settings", 1, 1, 1)
 		GameTooltip:AddLine("Drag to move around the minimap", 0.7, 0.7, 0.7)
 		GameTooltip:AddLine("Right-click to reset the position", 0.7, 0.7, 0.7)
-		local fields = statusFields(WoWVoiceDB.status or "")
+		local fields = statusFields(SofaSayDB.status or "")
 		if fields.state == "running" then
 			GameTooltip:AddLine("Tool: Running", 0.35, 1, 0.35)
 		elseif fields.state == "stopped" then
@@ -344,8 +362,8 @@ local function buildMinimapButton()
 		if fields.button then
 			GameTooltip:AddLine("Talk button: " .. fields.button, 1, 1, 1)
 		end
-		GameTooltip:AddLine("Channel: " .. labelFor(WoWVoiceDB.defaultChannel), 0.5, 1, 0.5)
-		GameTooltip:AddLine("Sticky channel: " .. (WoWVoiceDB.sticky and "On" or "Off"), 0.8, 0.8, 0.8)
+		GameTooltip:AddLine("Channel: " .. labelFor(SofaSayDB.defaultChannel), 0.5, 1, 0.5)
+		GameTooltip:AddLine("Sticky channel: " .. (SofaSayDB.sticky and "On" or "Off"), 0.8, 0.8, 0.8)
 		GameTooltip:Show()
 	end)
 	minimapButton:SetScript("OnLeave", function()
@@ -362,7 +380,7 @@ local function buildMinimapButton()
 		if not (cx and cy and scale and scale > 0 and x and y) then
 			return
 		end
-		WoWVoiceDB.minimapAngle = math.deg(math.atan2(y / scale - cy, x / scale - cx))
+		SofaSayDB.minimapAngle = math.deg(math.atan2(y / scale - cy, x / scale - cx))
 		updateMinimapPosition()
 	end
 
@@ -383,9 +401,9 @@ local function buildPanel()
 		return
 	end
 
-	panel = CreateFrame("Frame", "WoWVoicePanel", UIParent, "BackdropTemplate")
+	panel = CreateFrame("Frame", "SofaSayPanel", UIParent, "BackdropTemplate")
 	panel:SetSize(400, 470)
-	panel:SetPoint("CENTER", UIParent, "CENTER", WoWVoiceDB.x or 0, WoWVoiceDB.y or 0)
+	panel:SetPoint("CENTER", UIParent, "CENTER", SofaSayDB.x or 0, SofaSayDB.y or 0)
 	panel:SetFrameStrata("DIALOG")
 	panel:SetToplevel(true)
 	panel:SetClampedToScreen(true)
@@ -398,8 +416,8 @@ local function buildPanel()
 		local x, y = self:GetCenter()
 		local ux, uy = UIParent:GetCenter()
 		if x and y and ux and uy then
-			WoWVoiceDB.x = math.floor(x - ux + 0.5)
-			WoWVoiceDB.y = math.floor(y - uy + 0.5)
+			SofaSayDB.x = math.floor(x - ux + 0.5)
+			SofaSayDB.y = math.floor(y - uy + 0.5)
 		end
 	end)
 	panel:SetBackdrop({
@@ -413,7 +431,7 @@ local function buildPanel()
 
 	local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	title:SetPoint("TOPLEFT", 18, -16)
-	title:SetText("WoW Voice Chat")
+	title:SetText("SofaSay")
 
 	local close = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
 	close:SetPoint("TOPRIGHT", -5, -5)
@@ -489,8 +507,8 @@ local function buildPanel()
 	stickyCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
 	stickyCheck:SetPoint("TOPLEFT", 16, -334)
 	stickyCheck:SetScript("OnClick", function(self)
-		WoWVoiceDB.sticky = self:GetChecked() and true or false
-		setNote("Sticky channel " .. (WoWVoiceDB.sticky and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
+		SofaSayDB.sticky = self:GetChecked() and true or false
+		setNote("Sticky channel " .. (SofaSayDB.sticky and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
 	end)
 	local stickyLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	stickyLabel:SetPoint("LEFT", stickyCheck, "RIGHT", 2, 0)
@@ -499,8 +517,8 @@ local function buildPanel()
 	closeCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
 	closeCheck:SetPoint("TOPLEFT", 16, -364)
 	closeCheck:SetScript("OnClick", function(self)
-		WoWVoiceDB.closeChatAfterSend = self:GetChecked() and true or false
-		setNote("Escape-after-send " .. (WoWVoiceDB.closeChatAfterSend and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
+		SofaSayDB.closeChatAfterSend = self:GetChecked() and true or false
+		setNote("Escape-after-send " .. (SofaSayDB.closeChatAfterSend and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
 	end)
 	local closeLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	closeLabel:SetPoint("LEFT", closeCheck, "RIGHT", 2, 0)
@@ -509,9 +527,9 @@ local function buildPanel()
 	minimapCheck = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
 	minimapCheck:SetPoint("TOPLEFT", 16, -394)
 	minimapCheck:SetScript("OnClick", function(self)
-		WoWVoiceDB.showMinimap = self:GetChecked() and true or false
+		SofaSayDB.showMinimap = self:GetChecked() and true or false
 		updateMinimapVisibility()
-		setNote("Minimap button " .. (WoWVoiceDB.showMinimap and "shown" or "hidden") .. ". This applies immediately and is saved on /reload or logout.")
+		setNote("Minimap button " .. (SofaSayDB.showMinimap and "shown" or "hidden") .. ". This applies immediately and is saved on /reload or logout.")
 	end)
 	local minimapLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	minimapLabel:SetPoint("LEFT", minimapCheck, "RIGHT", 2, 0)
@@ -519,7 +537,7 @@ local function buildPanel()
 
 	local hint = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	hint:SetPoint("BOTTOMLEFT", 18, 20)
-	hint:SetText("/wvc  |  WoWVoice " .. VERSION)
+	hint:SetText("/sofa  |  SofaSay " .. VERSION)
 
 	local reloadButton = makeButton(panel, "Save & Reload UI", 150, 22, function()
 		ReloadUI()
@@ -557,7 +575,7 @@ local function showPanel()
 	panel:Show()
 end
 
-function WoWVoice_Toggle()
+function SofaSay_Toggle()
 	if panel and panel:IsShown() then
 		panel:Hide()
 	else
@@ -566,8 +584,8 @@ function WoWVoice_Toggle()
 end
 
 local function setStatus(text)
-	WoWVoiceDB.status = text or ""
-	WoWVoiceDB.statusTime = time()
+	SofaSayDB.status = text or ""
+	SofaSayDB.statusTime = time()
 	if panel and panel:IsShown() then
 		refreshStatus()
 	end
@@ -579,27 +597,28 @@ end
 
 local function printHelp()
 	chatPrint("commands:")
-	chatPrint("  /wvc - show or hide the panel")
-	chatPrint("  /wvc show | hide | toggle - panel visibility")
-	chatPrint("  /wvc minimap [on|off|reset] - show, hide, or move the minimap button")
-	chatPrint("  /wvc channel <name> - choose the default channel")
-	chatPrint("  /wvc sticky [on|off] - remember the last channel")
-	chatPrint("  /wvc escape [on|off] - press Escape after sending")
-	chatPrint("  /wvc test - check that the desktop tool can type here")
-	chatPrint("  /wvc status <text> - used by the desktop tool")
-	chatPrint("  /wvc reload - save settings and reload the UI")
+	chatPrint("  /sofa - show or hide the panel")
+	chatPrint("  /sofa show | hide | toggle - panel visibility")
+	chatPrint("  /sofa minimap [on|off|reset] - show, hide, or move the minimap button")
+	chatPrint("  /sofa icon [sofa|classic] - minimap button art")
+	chatPrint("  /sofa channel <name> - choose the default channel")
+	chatPrint("  /sofa sticky [on|off] - remember the last channel")
+	chatPrint("  /sofa escape [on|off] - press Escape after sending")
+	chatPrint("  /sofa test - check that the desktop tool can type here")
+	chatPrint("  /sofa status <text> - used by the desktop tool")
+	chatPrint("  /sofa reload - save settings and reload the UI")
 end
 
-SLASH_WOWVOICE1 = "/wvc"
-SLASH_WOWVOICE2 = "/wowvoice"
-SlashCmdList["WOWVOICE"] = function(msg)
+SLASH_SOFASAY1 = "/sofa"
+SLASH_SOFASAY2 = "/sofassay"
+SlashCmdList["SOFASAY"] = function(msg)
 	initDB()
 	local command, rest = string.match(msg or "", "^%s*(%S*)%s*(.-)%s*$")
 	command = string.lower(command or "")
 	rest = rest or ""
 
 	if command == "" or command == "toggle" then
-		WoWVoice_Toggle()
+		SofaSay_Toggle()
 	elseif command == "show" then
 		showPanel()
 	elseif command == "hide" then
@@ -610,29 +629,41 @@ SlashCmdList["WOWVOICE"] = function(msg)
 		buildMinimapButton()
 		local value = string.lower(rest)
 		if value == "reset" then
-			WoWVoiceDB.minimapAngle = 220
+			SofaSayDB.minimapAngle = 220
 			updateMinimapPosition()
 			chatPrint("Minimap button moved back to its default position.")
 		else
 			if value == "on" then
-				WoWVoiceDB.showMinimap = true
+				SofaSayDB.showMinimap = true
 			elseif value == "off" then
-				WoWVoiceDB.showMinimap = false
+				SofaSayDB.showMinimap = false
 			else
-				WoWVoiceDB.showMinimap = not WoWVoiceDB.showMinimap
+				SofaSayDB.showMinimap = not SofaSayDB.showMinimap
 			end
 			updateMinimapVisibility()
 			if minimapCheck then
-				minimapCheck:SetChecked(WoWVoiceDB.showMinimap and true or false)
+				minimapCheck:SetChecked(SofaSayDB.showMinimap and true or false)
 			end
-			chatPrint("Minimap button " .. (WoWVoiceDB.showMinimap and "shown" or "hidden") .. ".")
+			chatPrint("Minimap button " .. (SofaSayDB.showMinimap and "shown" or "hidden") .. ".")
 		end
 	elseif command == "status" then
 		setStatus(rest)
+	elseif command == "icon" then
+		local value = string.lower(rest)
+		if value == "" then
+			value = (SofaSayDB.icon == "classic") and "sofa" or "classic"
+		end
+		if value ~= "sofa" and value ~= "classic" then
+			chatPrint("Unknown icon \"" .. rest .. "\". Use sofa or classic.")
+		else
+			SofaSayDB.icon = value
+			applyMinimapIcon()
+			chatPrint("Minimap icon set to " .. value .. ".")
+		end
 	elseif command == "channel" then
 		local name, label = channelByName(rest)
 		if not name then
-			chatPrint("Unknown channel \"" .. rest .. "\". Try /wvc to see the list.")
+			chatPrint("Unknown channel \"" .. rest .. "\". Try /sofa to see the list.")
 		else
 			buildPanel()
 			setChannel(name)
@@ -641,9 +672,9 @@ SlashCmdList["WOWVOICE"] = function(msg)
 	elseif command == "sticky" then
 		local value = parseOnOff(rest)
 		if value == nil then
-			value = not WoWVoiceDB.sticky
+			value = not SofaSayDB.sticky
 		end
-		WoWVoiceDB.sticky = value
+		SofaSayDB.sticky = value
 		if stickyCheck then
 			stickyCheck:SetChecked(value)
 		end
@@ -652,16 +683,16 @@ SlashCmdList["WOWVOICE"] = function(msg)
 	elseif command == "escape" then
 		local value = parseOnOff(rest)
 		if value == nil then
-			value = not WoWVoiceDB.closeChatAfterSend
+			value = not SofaSayDB.closeChatAfterSend
 		end
-		WoWVoiceDB.closeChatAfterSend = value
+		SofaSayDB.closeChatAfterSend = value
 		if closeCheck then
 			closeCheck:SetChecked(value)
 		end
 		setNote("Escape-after-send " .. (value and "enabled" or "disabled") .. ". Click Save & Reload UI to apply.")
 		chatPrint("Escape after sending " .. (value and "on" or "off") .. ".")
 	elseif command == "test" then
-		local fields = statusFields(WoWVoiceDB.status or "")
+		local fields = statusFields(SofaSayDB.status or "")
 		chatPrint("Test message received. The desktop tool can type into chat.")
 		local extra = "State: " .. (fields.state or "unknown")
 		if fields.button then
@@ -684,7 +715,7 @@ events:SetScript("OnEvent", function(_, _, name)
 	initDB()
 	buildPanel()
 	buildMinimapButton()
-	if WoWVoiceDB.status ~= "" then
-		chatPrint("Loaded. Type /wvc to open the panel.")
+	if SofaSayDB.status ~= "" then
+		chatPrint("Loaded. Type /sofa to open the panel.")
 	end
 end)

@@ -9,11 +9,11 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from wowvoice import addon_bridge  # noqa: E402
+from sofassay import addon_bridge  # noqa: E402
 
 SAMPLE = r'''
 -- SavedVariables written by the game
-WoWVoiceDB = {
+SofaSayDB = {
 	["defaultChannel"] = "party",
 	["sticky"] = false,
 	["closeChatAfterSend"] = false,
@@ -59,7 +59,7 @@ class ParseTests(unittest.TestCase):
         self.assertIs(data["nested"]["deep"]["1"], True)
 
     def test_escapes_and_comments(self) -> None:
-        text = 'WoWVoiceDB = { -- start\n ["s"] = "a \\"quote\\" and \\\\ slash",\n ["n"] = 1.5, }'
+        text = 'SofaSayDB = { -- start\n ["s"] = "a \\"quote\\" and \\\\ slash",\n ["n"] = 1.5, }'
         data = addon_bridge.parse_savedvars(text)
         self.assertEqual(data["s"], 'a "quote" and \\ slash')
         self.assertEqual(data["n"], 1.5)
@@ -109,13 +109,19 @@ class ApplyTests(unittest.TestCase):
             "Controller + F9",
         )
 
+    def test_catch_up_only_once_after_a_message(self) -> None:
+        self.assertTrue(addon_bridge.catch_up_due(announce=False, synced=False))
+        self.assertFalse(addon_bridge.catch_up_due(announce=False, synced=True))
+        # announce_status already refreshes the panel after every message.
+        self.assertFalse(addon_bridge.catch_up_due(announce=True, synced=False))
+
 
 class WatcherTests(unittest.TestCase):
     def test_picks_up_file_created_later(self) -> None:
         cfg = {"chat": dict(BASE_CFG["chat"])}
         watcher = addon_bridge.SettingsWatcher(cfg, interval=0.5)
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "WoWVoice.lua"
+            path = Path(tmp) / "SofaSay.lua"
             with mock.patch.object(addon_bridge, "find_savedvars", return_value=path):
                 self.assertEqual(watcher.poll_once(), [])
                 path.write_text(SAMPLE, encoding="utf-8")

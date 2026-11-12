@@ -23,7 +23,7 @@ function _obj()
   function o:SetBackdrop() end
   function o:SetBackdropColor() end
   function o:SetBackdropBorderColor() end
-  function o:SetTexture() end
+  function o:SetTexture(texture) self.texture = texture end
   function o:SetTexCoord() end
   function o:SetVertexColor(r, g, b) self.vertex = {r, g, b} end
   function o:SetAlpha(a) self.alpha = a end
@@ -88,12 +88,12 @@ time = os.time
 
 def main() -> int:
     lua = LuaRuntime()
-    source = (Path("addon/WoWVoice/WoWVoice.lua")).read_text(encoding="utf-8")
+    source = (Path("addon/SofaSay/SofaSay.lua")).read_text(encoding="utf-8")
     lua.execute(PRELUDE)
     lua.execute(source)
 
     events = lua.eval("_G._last_frame")
-    events.scripts["OnEvent"](events, "ADDON_LOADED", "WoWVoice")
+    events.scripts["OnEvent"](events, "ADDON_LOADED", "SofaSay")
 
     failures = 0
 
@@ -105,43 +105,67 @@ def main() -> int:
             failures += 1
             print(f"FAIL {label} {detail}")
 
-    db = lua.eval("WoWVoiceDB")
+    db = lua.eval("SofaSayDB")
     check("defaults created", db["defaultChannel"] == "say" and db["sticky"] is True)
-    check("panel hidden at load", lua.eval("WoWVoicePanel:IsShown()") is False)
+    check("panel hidden at load", lua.eval("SofaSayPanel:IsShown()") is False)
 
-    check("minimap button created", lua.eval("WoWVoiceMinimapButton ~= nil") is True)
-    check("minimap button shown", lua.eval("WoWVoiceMinimapButton:IsShown()") is True)
-    point = lua.eval("WoWVoiceMinimapButton.point")
+    check("minimap button created", lua.eval("SofaSayMinimapButton ~= nil") is True)
+    check("minimap button shown", lua.eval("SofaSayMinimapButton:IsShown()") is True)
+    point = lua.eval("SofaSayMinimapButton.point")
     check(
         "minimap positioned bottom-left",
         point is not None and abs(point[4] + 61.28) < 0.5 and abs(point[5] + 51.42) < 0.5,
         point,
     )
 
-    lua.eval('WoWVoiceMinimapButton.scripts.OnClick(WoWVoiceMinimapButton, "LeftButton")')
-    check("minimap click opens panel", lua.eval("WoWVoicePanel:IsShown()") is True)
-    lua.eval('WoWVoiceMinimapButton.scripts.OnClick(WoWVoiceMinimapButton, "LeftButton")')
-    check("minimap click closes panel", lua.eval("WoWVoicePanel:IsShown()") is False)
+    texture = lua.eval("SofaSayMinimapButton.icon.texture")
+    check(
+        "sofa icon is the default",
+        texture is not None and "SofaSay\\sofa" in texture,
+        texture,
+    )
+    lua.eval('SlashCmdList["SOFASAY"]("icon classic")')
+    texture = lua.eval("SofaSayMinimapButton.icon.texture")
+    check(
+        "classic icon fallback",
+        texture is not None and "INV_Misc_Spyglass" in texture,
+        texture,
+    )
+    check("icon choice saved", lua.eval("SofaSayDB.icon") == "classic")
+    lua.eval('SlashCmdList["SOFASAY"]("icon sofa")')
+    texture = lua.eval("SofaSayMinimapButton.icon.texture")
+    check(
+        "sofa icon restored",
+        texture is not None and texture.endswith("sofa"),
+        texture,
+    )
+    lua.eval('SlashCmdList["SOFASAY"]("icon nonsense")')
+    check("unknown icon ignored", lua.eval("SofaSayDB.icon") == "sofa")
 
-    lua.eval('SlashCmdList["WOWVOICE"]("status state=running | channel=Party | button=Controller + F9 | mic=Test Mic | last=hello there")')
-    check("status stored", lua.eval("WoWVoiceDB.status").startswith("state=running"))
-    check("status time set", lua.eval("WoWVoiceDB.statusTime") > 0)
+    lua.eval('SofaSayMinimapButton.scripts.OnClick(SofaSayMinimapButton, "LeftButton")')
+    check("minimap click opens panel", lua.eval("SofaSayPanel:IsShown()") is True)
+    lua.eval('SofaSayMinimapButton.scripts.OnClick(SofaSayMinimapButton, "LeftButton")')
+    check("minimap click closes panel", lua.eval("SofaSayPanel:IsShown()") is False)
 
-    vertex = lua.eval("WoWVoiceMinimapButton.icon.vertex")
+    lua.eval('SlashCmdList["SOFASAY"]("status state=running | channel=Party | button=Controller + F9 | mic=Test Mic | last=hello there")')
+    check("status stored", lua.eval("SofaSayDB.status").startswith("state=running"))
+    check("status time set", lua.eval("SofaSayDB.statusTime") > 0)
+
+    vertex = lua.eval("SofaSayMinimapButton.icon.vertex")
     check(
         "minimap tint running",
         vertex is not None and vertex[2] == 1 and vertex[1] < 0.5,
         vertex,
     )
-    lua.eval("WoWVoiceMinimapButton.scripts.OnEnter(WoWVoiceMinimapButton)")
+    lua.eval("SofaSayMinimapButton.scripts.OnEnter(SofaSayMinimapButton)")
     tooltip = [m for m in lua.eval("_G._tooltip").values()]
     check("tooltip shows state", any("Tool: Running" in t for t in tooltip), tooltip)
     check("tooltip shows button", any("Talk button: Controller + F9" in t for t in tooltip), tooltip)
     check("tooltip shows sticky", any("Sticky channel: On" in t for t in tooltip), tooltip)
     check("tooltip reset hint", any("Right-click to reset" in t for t in tooltip), tooltip)
 
-    lua.eval('SlashCmdList["WOWVOICE"]("show")')
-    check("show opens panel", lua.eval("WoWVoicePanel:IsShown()") is True)
+    lua.eval('SlashCmdList["SOFASAY"]("show")')
+    check("show opens panel", lua.eval("SofaSayPanel:IsShown()") is True)
     fonts = lua.eval("_G._fonts")
     texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
     check("status headline rendered", any("Tool running" in t for t in texts), texts)
@@ -149,86 +173,87 @@ def main() -> int:
     check("last message rendered", any("Last: hello there" in t for t in texts), texts)
 
     # The age label ticks while the panel stays open.
-    lua.execute("WoWVoiceDB.statusTime = time() - 130")
-    lua.eval("WoWVoicePanel.scripts.OnUpdate(WoWVoicePanel, 20)")
+    lua.execute("SofaSayDB.statusTime = time() - 130")
+    lua.eval("SofaSayPanel.scripts.OnUpdate(SofaSayPanel, 20)")
     fonts = lua.eval("_G._fonts")
     texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
     check("status age ticks", any(t == "Updated 2m ago" for t in texts), texts)
 
-    lua.eval('SlashCmdList["WOWVOICE"]("status state=stopped")')
+    lua.eval('SlashCmdList["SOFASAY"]("status state=stopped")')
     fonts = lua.eval("_G._fonts")
     texts = [fonts[i].text for i in range(1, len(fonts) + 1) if fonts[i].text]
     check("stopped headline", any("Tool stopped" in t for t in texts), texts)
     check("stopped age label", any(t == "Stopped just now" for t in texts), texts)
-    vertex = lua.eval("WoWVoiceMinimapButton.icon.vertex")
+    vertex = lua.eval("SofaSayMinimapButton.icon.vertex")
     check(
         "minimap tint stopped",
         vertex is not None and vertex[1] == 1 and vertex[2] < 0.8,
         vertex,
     )
 
-    lua.eval('SlashCmdList["WOWVOICE"]("hide")')
-    check("hide closes panel", lua.eval("WoWVoicePanel:IsShown()") is False)
+    lua.eval('SlashCmdList["SOFASAY"]("hide")')
+    check("hide closes panel", lua.eval("SofaSayPanel:IsShown()") is False)
 
-    lua.eval('WoWVoice_Toggle()')
-    check("binding toggles panel", lua.eval("WoWVoicePanel:IsShown()") is True)
+    lua.eval('SofaSay_Toggle()')
+    check("binding toggles panel", lua.eval("SofaSayPanel:IsShown()") is True)
 
-    lua.eval('SlashCmdList["WOWVOICE"]("bogus")')
+    lua.eval('SlashCmdList["SOFASAY"]("bogus")')
     check("help printed", any("commands:" in m for m in lua.eval("_G._messages").values()))
-    check("help mentions minimap", any("/wvc minimap" in m for m in lua.eval("_G._messages").values()))
+    check("help mentions minimap", any("/sofa minimap" in m for m in lua.eval("_G._messages").values()))
+    check("help mentions icon", any("/sofa icon" in m for m in lua.eval("_G._messages").values()))
 
-    lua.eval('SlashCmdList["WOWVOICE"]("minimap off")')
-    check("minimap off hides button", lua.eval("WoWVoiceDB.showMinimap") is False)
-    check("minimap off button state", lua.eval("WoWVoiceMinimapButton:IsShown()") is False)
+    lua.eval('SlashCmdList["SOFASAY"]("minimap off")')
+    check("minimap off hides button", lua.eval("SofaSayDB.showMinimap") is False)
+    check("minimap off button state", lua.eval("SofaSayMinimapButton:IsShown()") is False)
 
-    lua.eval('SlashCmdList["WOWVOICE"]("minimap on")')
-    check("minimap on shows button", lua.eval("WoWVoiceDB.showMinimap") is True)
-    check("minimap on button state", lua.eval("WoWVoiceMinimapButton:IsShown()") is True)
+    lua.eval('SlashCmdList["SOFASAY"]("minimap on")')
+    check("minimap on shows button", lua.eval("SofaSayDB.showMinimap") is True)
+    check("minimap on button state", lua.eval("SofaSayMinimapButton:IsShown()") is True)
 
-    lua.execute("WoWVoiceDB.minimapAngle = 10")
-    lua.eval('SlashCmdList["WOWVOICE"]("minimap reset")')
-    check("minimap reset angle", lua.eval("WoWVoiceDB.minimapAngle") == 220)
-    point = lua.eval("WoWVoiceMinimapButton.point")
+    lua.execute("SofaSayDB.minimapAngle = 10")
+    lua.eval('SlashCmdList["SOFASAY"]("minimap reset")')
+    check("minimap reset angle", lua.eval("SofaSayDB.minimapAngle") == 220)
+    point = lua.eval("SofaSayMinimapButton.point")
     check(
         "minimap reset repositions",
         point is not None and abs(point[4] + 61.28) < 0.5 and abs(point[5] + 51.42) < 0.5,
         point,
     )
 
-    lua.eval("WoWVoiceMinimapButton.scripts.OnDragStart(WoWVoiceMinimapButton)")
-    lua.eval("WoWVoiceMinimapButton.scripts.OnUpdate()")
-    lua.eval("WoWVoiceMinimapButton.scripts.OnDragStop(WoWVoiceMinimapButton)")
-    check("drag updates angle", abs(lua.eval("WoWVoiceDB.minimapAngle") - 45) < 0.1)
+    lua.eval("SofaSayMinimapButton.scripts.OnDragStart(SofaSayMinimapButton)")
+    lua.eval("SofaSayMinimapButton.scripts.OnUpdate()")
+    lua.eval("SofaSayMinimapButton.scripts.OnDragStop(SofaSayMinimapButton)")
+    check("drag updates angle", abs(lua.eval("SofaSayDB.minimapAngle") - 45) < 0.1)
 
-    lua.execute("WoWVoiceDB.minimapAngle = 10")
-    lua.eval('WoWVoiceMinimapButton.scripts.OnClick(WoWVoiceMinimapButton, "RightButton")')
-    check("right-click resets angle", lua.eval("WoWVoiceDB.minimapAngle") == 220)
+    lua.execute("SofaSayDB.minimapAngle = 10")
+    lua.eval('SofaSayMinimapButton.scripts.OnClick(SofaSayMinimapButton, "RightButton")')
+    check("right-click resets angle", lua.eval("SofaSayDB.minimapAngle") == 220)
     check(
         "right-click does not toggle panel",
-        lua.eval("WoWVoicePanel:IsShown()") is True,
+        lua.eval("SofaSayPanel:IsShown()") is True,
     )
 
-    lua.eval('SlashCmdList["WOWVOICE"]("sticky off")')
-    check("sticky command off", lua.eval("WoWVoiceDB.sticky") is False)
-    lua.eval('SlashCmdList["WOWVOICE"]("sticky on")')
-    check("sticky command on", lua.eval("WoWVoiceDB.sticky") is True)
+    lua.eval('SlashCmdList["SOFASAY"]("sticky off")')
+    check("sticky command off", lua.eval("SofaSayDB.sticky") is False)
+    lua.eval('SlashCmdList["SOFASAY"]("sticky on")')
+    check("sticky command on", lua.eval("SofaSayDB.sticky") is True)
 
-    lua.eval('SlashCmdList["WOWVOICE"]("escape off")')
-    check("escape command off", lua.eval("WoWVoiceDB.closeChatAfterSend") is False)
-    lua.eval('SlashCmdList["WOWVOICE"]("escape on")')
-    check("escape command on", lua.eval("WoWVoiceDB.closeChatAfterSend") is True)
+    lua.eval('SlashCmdList["SOFASAY"]("escape off")')
+    check("escape command off", lua.eval("SofaSayDB.closeChatAfterSend") is False)
+    lua.eval('SlashCmdList["SOFASAY"]("escape on")')
+    check("escape command on", lua.eval("SofaSayDB.closeChatAfterSend") is True)
 
-    lua.eval('SlashCmdList["WOWVOICE"]("channel party")')
-    check("channel command", lua.eval("WoWVoiceDB.defaultChannel") == "party")
-    lua.eval('SlashCmdList["WOWVOICE"]("channel notachannel")')
-    check("unknown channel ignored", lua.eval("WoWVoiceDB.defaultChannel") == "party")
+    lua.eval('SlashCmdList["SOFASAY"]("channel party")')
+    check("channel command", lua.eval("SofaSayDB.defaultChannel") == "party")
+    lua.eval('SlashCmdList["SOFASAY"]("channel notachannel")')
+    check("unknown channel ignored", lua.eval("SofaSayDB.defaultChannel") == "party")
 
-    lua.eval('SlashCmdList["WOWVOICE"]("status state=running | channel=Party | button=Controller + F9")')
-    lua.eval('SlashCmdList["WOWVOICE"]("test")')
+    lua.eval('SlashCmdList["SOFASAY"]("status state=running | channel=Party | button=Controller + F9")')
+    lua.eval('SlashCmdList["SOFASAY"]("test")')
     messages = [m for m in lua.eval("_G._messages").values()]
     check("test command answers", any("Test message received" in m for m in messages), messages)
     check("test reports button", any("Button: Controller + F9" in m for m in messages), messages)
-    check("help mentions sticky", any("/wvc sticky" in m for m in messages), messages)
+    check("help mentions sticky", any("/sofa sticky" in m for m in messages), messages)
 
     print()
     print(f"{failures} failure(s)")

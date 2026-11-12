@@ -1,4 +1,4 @@
-"""WoW Voice Chat control panel.
+"""SofaSay control panel.
 
 A small window that starts and stops the push-to-talk tool without keeping a
 console open. It shows the tool's own log live and remembers a couple of panel
@@ -19,15 +19,15 @@ import webbrowser
 from pathlib import Path
 from tkinter import messagebox, scrolledtext, ttk
 
-from wowvoice.version import RELEASES_URL, __version__
+from sofassay.version import RELEASES_URL, __version__
 
 APP_DIR = Path(__file__).resolve().parent
 MAIN = APP_DIR / "main.py"
-LOG_PATH = APP_DIR / "wow-voicechat.log"
-PID_PATH = APP_DIR / "wow-voicechat.pid"
-# Keep in sync with wowvoice/config.py: the tool watches this file and shuts
+LOG_PATH = APP_DIR / "sofassay.log"
+PID_PATH = APP_DIR / "sofassay.pid"
+# Keep in sync with sofassay/config.py: the tool watches this file and shuts
 # down gracefully so it can tell the in-game panel it has stopped.
-STOP_PATH = APP_DIR / "wow-voicechat.stop"
+STOP_PATH = APP_DIR / "sofassay.stop"
 
 CREATE_NO_WINDOW = 0x08000000
 CREATE_NEW_PROCESS_GROUP = 0x00000200
@@ -36,8 +36,8 @@ COLOR_RUNNING = "#1f8a3b"
 COLOR_BUSY = "#b8860b"
 COLOR_STOPPED = "#8a8a8a"
 
-WINDOW_TITLE = "WoW Voice Chat"
-MUTEX_NAME = "WoWVoiceChat.ControlPanel"
+WINDOW_TITLE = "SofaSay"
+MUTEX_NAME = "SofaSay.ControlPanel"
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -90,6 +90,12 @@ class ControlPanel(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title(WINDOW_TITLE)
+        icon = APP_DIR / "assets" / "sofa.ico"
+        if icon.is_file():
+            try:
+                self.iconbitmap(default=str(icon))
+            except tk.TclError:
+                pass
         self.geometry("660x500")
         self.minsize(560, 420)
 
@@ -137,7 +143,7 @@ class ControlPanel(tk.Tk):
         self.dot.pack(side="left")
         titles = ttk.Frame(head)
         titles.pack(side="left", padx=(8, 0), fill="x", expand=True)
-        ttk.Label(titles, text="WoW Voice Chat", font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        ttk.Label(titles, text="SofaSay", font=("Segoe UI", 13, "bold")).pack(anchor="w")
         self.detail = ttk.Label(titles, text="Stopped", font=("Segoe UI", 9))
         self.detail.pack(anchor="w")
         self.channel_label = ttk.Label(head, text="Channel: Say", font=("Segoe UI", 9))
@@ -243,7 +249,7 @@ class ControlPanel(tk.Tk):
     @staticmethod
     def _load_cfg() -> dict:
         try:
-            from wowvoice.config import load_config
+            from sofassay.config import load_config
 
             return load_config()
         except (SystemExit, OSError, ValueError):
@@ -251,7 +257,7 @@ class ControlPanel(tk.Tk):
 
     def _save_panel_prefs(self, **updates) -> None:
         try:
-            from wowvoice.config import load_config, save_config
+            from sofassay.config import load_config, save_config
 
             cfg = load_config()
             cfg.setdefault("panel", {}).update(updates)
@@ -339,7 +345,7 @@ class ControlPanel(tk.Tk):
             return
 
         threading.Thread(target=self._pump, args=(self.proc,), daemon=True).start()
-        self._append("\u2014 starting WoW Voice Chat \u2014")
+        self._append("\u2014 starting SofaSay \u2014")
         self._set_state("Starting \u2014 loading the speech model\u2026", COLOR_BUSY)
         self.start_btn.state(["disabled"])
         self.stop_btn.state(["!disabled"])
@@ -521,7 +527,7 @@ class ControlPanel(tk.Tk):
         if self.closing:
             return
         try:
-            from wowvoice.config import load_config
+            from sofassay.config import load_config
 
             cfg = load_config()
         except (SystemExit, OSError, ValueError):
@@ -536,7 +542,7 @@ class ControlPanel(tk.Tk):
 
     def open_setup(self) -> None:
         try:
-            from wowvoice.setup_wizard import SetupWizard
+            from sofassay.setup_wizard import SetupWizard
         except Exception as exc:  # noqa: BLE001 - show the real reason
             messagebox.showerror(WINDOW_TITLE, f"Could not open the setup window:\n{exc}")
             return
@@ -562,9 +568,9 @@ class ControlPanel(tk.Tk):
 
     def _push_status_worker(self) -> None:
         try:
-            from wowvoice import addon_bridge
-            from wowvoice.config import load_config
-            from wowvoice.recorder import Recorder
+            from sofassay import addon_bridge
+            from sofassay.config import load_config
+            from sofassay.recorder import Recorder
 
             cfg = load_config()
             cfg.setdefault("addon", {})["enabled"] = True
@@ -597,10 +603,10 @@ class ControlPanel(tk.Tk):
         threading.Thread(target=self._test_message_worker, daemon=True).start()
 
     def _test_message_worker(self) -> None:
-        """Type ``/wvc test`` into WoW, which the addon answers privately."""
+        """Type ``/sofa test`` into WoW, which the addon answers privately."""
         try:
-            from wowvoice import wowinput
-            from wowvoice.config import load_config
+            from sofassay import wowinput
+            from sofassay.config import load_config
 
             cfg = load_config()
             chat = cfg.get("chat") or {}
@@ -612,7 +618,7 @@ class ControlPanel(tk.Tk):
                 self.events.put("Test message not sent - World of Warcraft is not running.")
                 return
             ok = wowinput.send_chat(
-                "/wvc test", cfg, log=lambda *_: None, close_chat=False
+                "/sofa test", cfg, log=lambda *_: None, close_chat=False
             )
         except Exception as exc:  # noqa: BLE001 - reported in the log view
             self.events.put(f"Test message failed: {exc}")
@@ -646,7 +652,7 @@ class ControlPanel(tk.Tk):
         if self.proc is not None and self.proc.poll() is None:
             pid = self.proc.pid
         if pid and not messagebox.askyesno(
-            WINDOW_TITLE, "Stop WoW Voice Chat and close this window?"
+            WINDOW_TITLE, "Stop SofaSay and close this window?"
         ):
             return
         self.closing = True

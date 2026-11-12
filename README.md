@@ -1,4 +1,6 @@
-# WoW Voice Chat
+# SofaSay
+
+<img src="assets/sofa.png" alt="" width="92" align="right">
 
 Push-to-talk chat for **World of Warcraft** from the couch, the bed, or anywhere
 a controller beats a keyboard. Connect a headset or microphone, press a button
@@ -30,7 +32,7 @@ Uses normal chat input and a standard addon. Read the
 ## Install
 
 1. Download the latest **ZIP from the GitHub Releases page** and extract it
-   somewhere you can write to (for example `Documents\WoWVoiceChat`, not
+   somewhere you can write to (for example `Documents\SofaSay`, not
    `Program Files`).
 2. Double-click **`setup.bat`**. It creates a private Python environment,
    installs the packages, downloads the speech model once (about 500 MB), and
@@ -46,7 +48,7 @@ Uses normal chat input and a standard addon. Read the
    - **In-game panel** - press **Install / Update** to copy the addon into
      `Interface\AddOns`.
 4. Press **Save & Finish**. The control panel opens; press **Start**, then switch
-   to World of Warcraft. Next time, launch **WoW Voice Chat** from the desktop
+   to World of Warcraft. Next time, launch **SofaSay** from the desktop
    shortcut.
 
 If **Install / Update** reports that Windows blocked the copy, close setup,
@@ -102,13 +104,13 @@ Channel numbers can differ between clients. Edit the `command` values in
 The addon is included in the ZIP and installed by the setup window. In game:
 
 1. Type **`/reload`** (or restart WoW) so the addon loads.
-2. Type **`/wvc`** to open the panel. You can also bind
-   *Toggle WoWVoice Panel* in **Key Bindings**.
-3. A circular button also sits by the minimap (bottom-left by default). Click
-   it to open the panel, drag it around the minimap to move it, or right-click
-   it to snap it back to the default spot. The icon is tinted **green** while
-   the tool is running and **amber** when it is stopped. Hide it with
-   **`/wvc minimap off`**.
+2. Type **`/sofa`** to open the panel. You can also bind
+   *Toggle SofaSay Panel* in **Key Bindings**.
+3. A sofa icon also sits by the minimap (bottom-left by default). Click it to
+   open the panel, drag it around the minimap to move it, or right-click it to
+   snap it back to the default spot. It is tinted **green** while the tool is
+   running and **amber** when it is stopped. Hide it with
+   **`/sofa minimap off`**.
 4. Pick the default channel and toggle sticky/Escape behaviour.
 5. Press **Save & Reload UI**. The addon saves on `/reload` or logout, and the
    desktop tool applies the new settings within a few seconds.
@@ -117,29 +119,33 @@ The panel shows the last status the desktop tool sent it. It switches to
 **Tool running** when you press **Start** and **Tool stopped** when you press
 **Stop**, so it does not keep showing an old state. The *Updated ...* line
 counts up while the panel is open. Hover the minimap button for the state, talk
-button, channel, and sticky setting. If the panel ever looks out of date (for
-example, the tool was closed from Task Manager or started before WoW), press
-**Send status to game** in the control panel to push it again.
+button, channel, and sticky setting.
+
+If the tool was already running when the game started, the startup status never
+reached the addon; the panel catches up after your first message goes through.
+For anything else (the tool was closed from Task Manager, for example), press
+**Send status to game** in the control panel.
 
 WoW addons cannot open sockets or read arbitrary files, so the two sides
 communicate indirectly:
 
 - **addon -> tool:** SavedVariables, written on `/reload` or logout.
-- **tool -> addon:** a `/wvc status ...` line typed into chat.
+- **tool -> addon:** a `/sofa status ...` line typed into chat.
 
 Useful commands:
 
 | Command | Effect |
 | --- | --- |
-| `/wvc` | Show or hide the panel |
-| `/wvc show` / `/wvc hide` | Panel visibility |
-| `/wvc minimap [on\|off\|reset]` | Show, hide, or move the minimap button |
-| `/wvc channel <name>` | Set the default channel (for example `/wvc channel party`) |
-| `/wvc sticky [on\|off]` | Remember the last channel |
-| `/wvc escape [on\|off]` | Press Escape after sending |
-| `/wvc test` | Check that the desktop tool can type into chat |
-| `/wvc reload` | Save and reload the UI |
-| `/wvc status <text>` | Set the status line (used by the tool) |
+| `/sofa` | Show or hide the panel |
+| `/sofa show` / `/sofa hide` | Panel visibility |
+| `/sofa minimap [on\|off\|reset]` | Show, hide, or move the minimap button |
+| `/sofa icon [sofa\|classic]` | Swap the sofa icon for the built-in spyglass |
+| `/sofa channel <name>` | Set the default channel (for example `/sofa channel party`) |
+| `/sofa sticky [on\|off]` | Remember the last channel |
+| `/sofa escape [on\|off]` | Press Escape after sending |
+| `/sofa test` | Check that the desktop tool can type into chat |
+| `/sofa reload` | Save and reload the UI |
+| `/sofa status <text>` | Set the status line (used by the tool) |
 
 ## Control panel
 
@@ -149,23 +155,25 @@ Useful commands:
 - **Send status to game** - pushes the current state to the in-game panel. The
   tool already does this automatically on Start and Stop; use the button if the
   panel looks out of date.
-- **Send test message** - types `/wvc test` into WoW so you can confirm the
+- **Send test message** - types `/sofa test` into WoW so you can confirm the
   desktop tool can type and the addon responds. It does not post a public chat
   message.
 - **Open config** - edits `config.json`.
 - **Always on top** - keeps the window visible over the game. This is remembered.
 - **Start when this window opens** - starts listening automatically (on by
   default). Uncheck it if you prefer to press **Start** yourself.
-- **Log** - live output, also written to `wow-voicechat.log`.
-- **v1.0.4 · Check for updates** - opens the latest Releases page.
+- **Log** - live output, also written to `sofassay.log`.
+- **v2.0.0 · Check for updates** - opens the latest Releases page.
 
 Only one panel opens at a time. Closing it stops the tool. If the shortcut is
 missing, run `panel.bat`; `run.bat` starts the console version.
 
-Start and Stop each send one `/wvc status ...` line to the game, so the in-game
+Start and Stop each send one `/sofa status ...` line to the game, so the in-game
 panel always shows whether the tool is running. That briefly brings WoW to the
-front. Set `addon.sync_status` to `false` if you would rather update the panel
-only with the **Send status to game** button.
+front. If the tool started before the game, the first message you send updates
+the panel once it is in the world, so it never types into a login screen. Set
+`addon.sync_status` to `false` if you would rather update the panel only with
+the **Send status to game** button.
 
 ## Changing the microphone or talk button
 
@@ -238,6 +246,7 @@ is the safe way to change it; these are the useful keys:
     "use_in_game_settings": true,   // addon settings override this file
     "sync_status": true,            // panel says running/stopped with the tool
     "announce_status": false        // also update the panel after every message
+                                    // (off = one catch-up after the first message)
   },
   "panel": {
     "auto_start": true,             // start listening when the panel opens
@@ -318,12 +327,12 @@ If you want zero third-party risk, do not use external input tools at all.
   press **Test**. A quiet headset may need a higher Windows input level or a
   lower `audio.silence_dbfs` (for example `-60`).
 - **The panel does not exist in game.** The addon must be installed into the
-  correct client folder (`_forever_\Interface\AddOns\WoWVoice`). Use **Install /
+  correct client folder (`_forever_\Interface\AddOns\SofaSay`). Use **Install /
   Update** in Setup, then `/reload`; if it still does not appear, restart WoW
   and make sure the addon is enabled on the character-select AddOns screen.
 - **"Windows blocked the copy" when installing the addon.** The game folder is
   protected. Run `setup.bat` as administrator once and use **Install / Update**,
-  or copy `addon\WoWVoice` into
+  or copy `addon\SofaSay` into
   `...\World of Warcraft\_forever_\Interface\AddOns` manually.
 - **Addon changes do not apply immediately.** The game only writes
   SavedVariables on `/reload` or logout. Press **Save & Reload UI** in the panel,
@@ -333,6 +342,10 @@ If you want zero third-party risk, do not use external input tools at all.
   Task Manager (or started while WoW was closed), it could not send the final
   update. Press **Send status to game** in the control panel, or Start and Stop
   the tool once. Check that `addon.sync_status` is `true` in `config.json`.
+- **The minimap icon is blank or shows the wrong art.** Type
+  `/sofa icon classic` to use the built-in spyglass, or `/sofa icon sofa` to go
+  back. The sofa image ships inside `addon\SofaSay`, so it also needs the addon
+  copied with **Install / Update** in Setup.
 - **Share also opens Xbox Game Bar or takes a screenshot.** Turn that shortcut
   off in Windows Settings -> Gaming -> Xbox Game Bar. The tool still receives
   the button.
@@ -358,16 +371,18 @@ panel.bat / run.bat     panel without shortcut / console version
 make_shortcut.ps1       desktop shortcut creator
 package.ps1             builds the release ZIP in dist\
 selftest.py             routing checks that need no hardware
-wowvoice/config.py      defaults and channel list
-wowvoice/routing.py     spoken channel parser and sticky state
-wowvoice/controller.py  controller button via Raw Input, hotkey fallback
-wowvoice/recorder.py    microphone capture
-wowvoice/transcriber.py local faster-whisper speech-to-text
-wowvoice/wowinput.py    focus, keyboard input, chat delivery
-wowvoice/app.py         push-to-talk state machine
-wowvoice/addon_bridge.py SavedVariables parser, settings watcher, addon install
-wowvoice/setup_wizard.py first-run setup window
-addon/WoWVoice/         in-game panel and status/settings display
+sofassay/config.py      defaults and channel list
+sofassay/routing.py     spoken channel parser and sticky state
+sofassay/controller.py  controller button via Raw Input, hotkey fallback
+sofassay/recorder.py    microphone capture
+sofassay/transcriber.py local faster-whisper speech-to-text
+sofassay/wowinput.py    focus, keyboard input, chat delivery
+sofassay/app.py         push-to-talk state machine
+sofassay/addon_bridge.py SavedVariables parser, settings watcher, addon install
+sofassay/setup_wizard.py first-run setup window
+addon/SofaSay/         in-game panel, sofa icon, status/settings display
+assets/                 sofa icon for the shortcut and window (generated)
+tools/make_art.py       redraws the sofa art (no image libraries needed)
 tests/                  unit and Lua smoke tests
 ```
 
@@ -390,11 +405,11 @@ Local build:
 
 ```text
 powershell -ExecutionPolicy Bypass -File package.ps1
-gh release create v1.0.4 dist\WoWVoiceChat-1.0.4.zip --title "WoWVoiceChat 1.0.4"
+gh release create v2.0.0 dist\SofaSay-2.0.0.zip --title "SofaSay 2.0.0"
 ```
 
 The GitHub Actions workflows run the tests on every push and build/upload the
-ZIP automatically when you push a tag such as `v1.0.4`.
+ZIP automatically when you push a tag such as `v2.0.0`.
 
 ## License
 

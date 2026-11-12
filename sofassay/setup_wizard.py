@@ -24,7 +24,7 @@ HOTKEYS = [f"F{i}" for i in range(1, 13)] + ["SPACE", "TAB", "MOUSE4", "MOUSE5"]
 class SetupWizard(tk.Toplevel):
     def __init__(self, parent: tk.Misc, on_saved=None):
         super().__init__(parent)
-        self.title("WoW Voice Chat - Setup")
+        self.title("SofaSay - Setup")
         self.resizable(False, False)
         self.transient(parent)
         self.cfg = load_config()
@@ -433,9 +433,9 @@ class SetupWizard(tk.Toplevel):
     # ------------------------------------------------------------------
     def _refresh_addon_status(self) -> None:
         game = self._game_dir()
-        installed = bool(game) and (game / "Interface" / "AddOns" / addon_bridge.ADDON_NAME / "WoWVoice.toc").is_file()
+        installed = bool(game) and (game / "Interface" / "AddOns" / addon_bridge.ADDON_NAME / "SofaSay.toc").is_file()
         if installed:
-            self.addon_status.configure(text="Installed. Type /wvc in game (after /reload) to open it.")
+            self.addon_status.configure(text="Installed. Type /sofa in game (after /reload) to open it.")
         elif game:
             self.addon_status.configure(text="Not installed yet. Click Install / Update.")
         else:
@@ -470,23 +470,23 @@ class SetupWizard(tk.Toplevel):
     def _save(self) -> None:
         game = self._game_dir()
         if game is None:
-            messagebox.showerror("WoW Voice Chat", "Pick your World of Warcraft folder first.", parent=self)
+            messagebox.showerror("SofaSay", "Pick your World of Warcraft folder first.", parent=self)
             return
         try:
             share_byte = int(self.byte_var.get())
             share_mask = int(self.mask_var.get(), 16)
         except ValueError:
-            messagebox.showerror("WoW Voice Chat", "Byte must be a number (0-63) and the mask hex (like 0x08).", parent=self)
+            messagebox.showerror("SofaSay", "Byte must be a number (0-63) and the mask hex (like 0x08).", parent=self)
             return
         if not 0 <= share_byte <= 63:
-            messagebox.showerror("WoW Voice Chat", "Byte must be between 0 and 63.", parent=self)
+            messagebox.showerror("SofaSay", "Byte must be between 0 and 63.", parent=self)
             return
         if share_mask <= 0 or share_mask > 0xFF or (share_mask & (share_mask - 1)):
-            messagebox.showerror("WoW Voice Chat", "The mask must be a single hex bit, like 0x08 or 0x20.", parent=self)
+            messagebox.showerror("SofaSay", "The mask must be a single hex bit, like 0x08 or 0x20.", parent=self)
             return
         hotkey = self.hotkey_var.get().strip().upper()
         if HotkeyTrigger(hotkey).vk is None:
-            messagebox.showerror("WoW Voice Chat", f"Unknown key: {hotkey}", parent=self)
+            messagebox.showerror("SofaSay", f"Unknown key: {hotkey}", parent=self)
             return
 
         cfg = self.cfg
@@ -504,7 +504,7 @@ class SetupWizard(tk.Toplevel):
         )
         save_config(cfg)
         messagebox.showinfo(
-            "WoW Voice Chat",
+            "SofaSay",
             "Setup saved.\n\nIf the tool is running, restart it so the new microphone and button are used.",
             parent=self,
         )

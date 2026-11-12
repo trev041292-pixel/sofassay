@@ -1,11 +1,11 @@
-"""Bridge to the in-game WoWVoice addon.
+"""Bridge to the in-game SofaSay addon.
 
 AddOns in this client cannot open sockets or files, so the two sides talk
 through the only channels the game offers:
 
 * addon -> tool: the addon's SavedVariables file (written by the game on
   ``/reload`` or logout), which we parse here;
-* tool -> addon: a slash command typed into the chat box (``/wvc status ...``).
+* tool -> addon: a slash command typed into the chat box (``/sofa status ...``).
 
 Nothing here requires the addon to be installed; callers simply get no
 settings back.
@@ -19,9 +19,9 @@ from pathlib import Path
 
 from .wowinput import send_chat
 
-ADDON_NAME = "WoWVoice"
+ADDON_NAME = "SofaSay"
 SAVEDVARS_FILE = f"{ADDON_NAME}.lua"
-ADDON_VERSION = "1.0.4"
+ADDON_VERSION = "2.0.0"
 
 # Addon key -> (config section, config key, converter)
 SETTING_MAP = {
@@ -100,7 +100,7 @@ def detect_game_dir(cfg: dict | None = None) -> Path | None:
 
 
 def find_savedvars(cfg: dict | None = None) -> Path | None:
-    """Newest ``WoWVoice.lua`` across every account on the machine."""
+    """Newest ``SofaSay.lua`` across every account on the machine."""
     game = detect_game_dir(cfg)
     if game is None:
         return None
@@ -114,7 +114,7 @@ def find_savedvars(cfg: dict | None = None) -> Path | None:
 
 
 # --------------------------------------------------------------------------
-# Minimal Lua table parser (SavedVariables are plain ``WoWVoiceDB = { ... }``)
+# Minimal Lua table parser (SavedVariables are plain ``SofaSayDB = { ... }``)
 # --------------------------------------------------------------------------
 _NUMBER_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 _IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
@@ -255,7 +255,7 @@ class _LuaTableParser:
                 raise self.error("expected ',' or '}'")
 
 
-def parse_savedvars(text: str, root: str = "WoWVoiceDB") -> dict:
+def parse_savedvars(text: str, root: str = "SofaSayDB") -> dict:
     match = re.search(rf"\b{root}\s*=\s*", text)
     if not match:
         raise ValueError(f"{root} was not found in the SavedVariables file")
@@ -390,13 +390,13 @@ def catch_up_due(announce: bool, synced: bool) -> bool:
 
 
 def push_status(cfg: dict, text: str, log=print) -> bool:
-    """Type ``/wvc status ...`` into the game.
+    """Type ``/sofa status ...`` into the game.
 
     Slash commands close the chat box on their own, so no Escape is sent.
     """
     if not (cfg.get("addon") or {}).get("enabled", True):
         return False
-    line = f"/wvc status {text}".strip()
+    line = f"/sofa status {text}".strip()
     return send_chat(line, cfg, log=log, close_chat=False)
 
 

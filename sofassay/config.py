@@ -1,4 +1,4 @@
-"""Configuration loading/saving for WoW Voice Chat."""
+"""Configuration loading/saving for SofaSay."""
 from __future__ import annotations
 
 import copy
@@ -11,7 +11,7 @@ APP_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = APP_DIR / "config.json"
 # The control panel asks a running tool to shut down gracefully by creating
 # this file. The tool then pushes a final "stopped" status to the addon.
-STOP_PATH = APP_DIR / "wow-voicechat.stop"
+STOP_PATH = APP_DIR / "sofassay.stop"
 
 # Channel definitions. ``command`` is pasted in front of the message. The
 # whisper entry is special: its command contains {target}. The spoken alias
@@ -144,14 +144,14 @@ DEFAULTS = {
         "model_dir": None,
     },
     "addon": {
-        # The bundled in-game panel (addon/WoWVoice).
+        # The bundled in-game panel (addon/SofaSay).
         "enabled": True,
         # Let the addon's saved settings override config.json (applied at
         # startup and whenever the game writes SavedVariables).
         "use_in_game_settings": True,
         "watch_seconds": 2.0,
         # Tell the in-game panel when the tool starts and stops, so it does not
-        # keep showing an old state. This types "/wvc status ..." into the game
+        # keep showing an old state. This types "/sofa status ..." into the game
         # once at startup and once on shutdown.
         "sync_status": True,
         # Send the in-game panel a status update after every message.

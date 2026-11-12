@@ -1,4 +1,4 @@
-"""Command-line entry point for WoW Voice Chat."""
+"""Command-line entry point for SofaSay."""
 from __future__ import annotations
 
 import argparse
@@ -7,11 +7,11 @@ import sys
 import time
 from pathlib import Path
 
-from wowvoice import wowinput
-from wowvoice.app import PID_PATH, VoiceChatApp
-from wowvoice.config import CONFIG_PATH, load_config
-from wowvoice.controller import RawInputTrigger, TriggerManager
-from wowvoice.recorder import Recorder, describe_device, list_input_devices
+from sofassay import wowinput
+from sofassay.app import PID_PATH, SofaSayApp
+from sofassay.config import CONFIG_PATH, load_config
+from sofassay.controller import RawInputTrigger, TriggerManager
+from sofassay.recorder import Recorder, describe_device, list_input_devices
 
 
 def show_devices(cfg: dict) -> None:
@@ -80,7 +80,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.setup:
-        from wowvoice.setup_wizard import run_setup_wizard
+        from sofassay.setup_wizard import run_setup_wizard
 
         run_setup_wizard()
         return 0
@@ -100,7 +100,7 @@ def main() -> int:
         ok = wowinput.send_chat(args.send_test, cfg, dry_run=args.dry_run)
         return 0 if ok else 1
 
-    app = VoiceChatApp(cfg, dry_run=args.dry_run, hotkey_only=args.hotkey_only)
+    app = SofaSayApp(cfg, dry_run=args.dry_run, hotkey_only=args.hotkey_only)
     try:
         PID_PATH.write_text(str(os.getpid()), encoding="utf-8")
     except OSError:

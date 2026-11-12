@@ -1,8 +1,8 @@
 """Quick sanity checks that need no microphone or game."""
 from __future__ import annotations
 
-from wowvoice.config import load_config
-from wowvoice.routing import Router
+from sofassay.config import load_config
+from sofassay.routing import Router
 
 
 def main() -> int:

@@ -15,11 +15,11 @@ from .routing import Router
 from .transcriber import Transcriber
 from .version import __version__
 
-LOG_PATH = APP_DIR / "wow-voicechat.log"
-PID_PATH = APP_DIR / "wow-voicechat.pid"
+LOG_PATH = APP_DIR / "sofassay.log"
+PID_PATH = APP_DIR / "sofassay.pid"
 
 
-class VoiceChatApp:
+class SofaSayApp:
     def __init__(self, cfg: dict, dry_run: bool = False, hotkey_only: bool = False):
         self.cfg = cfg
         self.dry_run = dry_run
@@ -53,7 +53,7 @@ class VoiceChatApp:
         mic_name = self.recorder.description
         print()
         print("=" * 66)
-        print(f"  WoW Voice Chat {__version__}")
+        print(f"  SofaSay {__version__}")
         print("=" * 66)
         print(f"  Trigger       : {trigger_names}")
         print(f"  Microphone    : {mic_name}")
@@ -169,7 +169,7 @@ class VoiceChatApp:
                 "(install the addon, then /reload in game)."
             )
         else:
-            self.log("In-game settings: watching the WoWVoice addon.")
+            self.log("In-game settings: watching the SofaSay addon.")
 
     def _on_addon_settings(self, cfg: dict, changes: list[str]) -> None:
         chat = cfg.get("chat", {})

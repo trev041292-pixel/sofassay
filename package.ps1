@@ -1,11 +1,11 @@
 # Builds the shareable ZIP in dist\.
 #   powershell -ExecutionPolicy Bypass -File package.ps1
-param([string]$Version = '1.0.4')
+param([string]$Version = '2.0.0')
 
 $ErrorActionPreference = 'Stop'
 
 $root = $PSScriptRoot
-$name = "WoWVoiceChat-$Version"
+$name = "SofaSay-$Version"
 $dist = Join-Path $root 'dist'
 $stage = Join-Path $dist $name
 $zip = Join-Path $dist "$name.zip"
@@ -33,7 +33,7 @@ foreach ($file in $files) {
     Copy-Item $source (Join-Path $stage $file)
 }
 
-foreach ($folder in @('wowvoice', 'addon')) {
+foreach ($folder in @('sofassay', 'addon', 'assets')) {
     $source = Join-Path $root $folder
     if (-not (Test-Path $source)) { throw "Missing required folder: $folder" }
     $target = Join-Path $stage $folder
@@ -50,7 +50,7 @@ foreach ($folder in @('wowvoice', 'addon')) {
 }
 
 # Personal settings and caches must never ship.
-foreach ($forbidden in @('config.json', '.venv', 'wow-voicechat.log', 'wow-voicechat.pid', 'wow-voicechat.stop')) {
+foreach ($forbidden in @('config.json', '.venv', 'sofassay.log', 'sofassay.pid', 'sofassay.stop')) {
     if (Test-Path (Join-Path $stage $forbidden)) {
         throw "Refusing to package personal data: $forbidden"
     }
